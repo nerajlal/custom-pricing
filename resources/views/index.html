@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Pricing App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen p-6">
+        <div class="max-w-6xl mx-auto">
+            <!-- Header -->
+            <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                <h1 class="text-3xl font-bold text-gray-900">Custom Pricing Manager</h1>
+                <p class="text-gray-600 mt-2">Set custom prices for specific customers</p>
+            </div>
+
+            <!-- Customer Search Section -->
+            <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">Search Customer</h2>
+                
+                <div class="flex gap-3">
+                    <input 
+                        type="email" 
+                        id="customerEmail" 
+                        placeholder="Enter customer email..."
+                        class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                    <button 
+                        onclick="searchCustomer()"
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                    >
+                        Search
+                    </button>
+                </div>
+
+                <!-- Customer Result -->
+                <div id="customerResult" class="hidden mt-6">
+                    <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h3 class="font-semibold text-lg" id="customerName"></h3>
+                                <p class="text-gray-600" id="customerEmailDisplay"></p>
+                                <p class="text-sm text-gray-500 mt-1" id="customerId"></p>
+                            </div>
+                            
+                            <!-- Toggle Switch -->
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm font-medium text-gray-700">Enable Custom Pricing</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        id="customPricingToggle"
+                                        onchange="toggleCustomPricing()"
+                                        class="sr-only peer"
+                                    >
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Product Search & Pricing Section -->
+            <div id="pricingSection" class="hidden">
+                <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Set Custom Prices</h2>
+                    
+                    <div class="flex gap-3 mb-4">
+                        <input 
+                            type="text" 
+                            id="productSearch" 
+                            placeholder="Search products..."
+                            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                        <button 
+                            onclick="searchProducts()"
+                            class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                        >
+                            Search Products
+                        </button>
+                    </div>
+
+                    <!-- Product Results -->
+                    <div id="productResults" class="grid grid-cols-1 gap-4"></div>
+                </div>
+
+                <!-- Existing Custom Prices -->
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Current Custom Prices</h2>
+                    <div id="existingPrices" class="space-y-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Price Modal -->
+    <div id="priceModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 class="text-xl font-semibold mb-4">Set Custom Price</h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Product</label>
+                    <p id="modalProductName" class="text-gray-900 font-medium"></p>
+                    <p id="modalVariantName" class="text-sm text-gray-600"></p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Original Price</label>
+                    <p id="modalOriginalPrice" class="text-gray-900 font-semibold text-lg"></p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Custom Price</label>
+                    <input 
+                        type="number" 
+                        id="customPriceInput"
+                        step="0.01"
+                        min="0"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="0.00"
+                    >
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button 
+                    onclick="closeModal()"
+                    class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+                >
+                    Cancel
+                </button>
+                <button 
+                    onclick="saveCustomPrice()"
+                    class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                >
+                    Save Price
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        const API_URL = 'YOUR_LARAVEL_API_URL';
+        const SHOP_DOMAIN = 'YOUR_SHOP_DOMAIN.myshopify.com';
+        let currentCustomer = null;
+        let currentPricingSetting = null;
+        let selectedProduct = null;
+
+        async function searchCustomer() {
+            const email = document.getElementById('customerEmail').value.trim();
+            if (!email) {
+                alert('Please enter a customer email');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/admin/customers/search`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + sessionStorage.getItem('token')
+                    },
+                    body: JSON.stringify({ email, shop: SHOP_DOMAIN })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentCustomer = data.customer;
+                    currentPricingSetting = data.pricing_setting;
+                    displayCustomer(data.customer, data.pricing_setting);
+                    loadExistingPrices();
+                } else {
+                    alert(data.message || 'Customer not found');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to search customer');
+            }
+        }
+
+        function displayCustomer(customer, setting) {
+            document.getElementById('customerName').textContent = `${customer.first_name} ${customer.last_name}`;
+            document.getElementById('customerEmailDisplay').textContent = customer.email;
+            document.getElementById('customerId').textContent = `Customer ID: ${customer.id}`;
+            document.getElementById('customPricingToggle').checked = setting.is_custom_pricing_enabled;
+            
+            document.getElementById('customerResult').classList.remove('hidden');
+            document.getElementById('pricingSection').classList.remove('hidden');
+        }
+
+        async function toggleCustomPricing() {
+            const enabled = document.getElementById('customPricingToggle').checked;
+            
+            try {
+                const response = await fetch(`${API_URL}/admin/customers/toggle-pricing`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + sessionStorage.getItem('token')
+                    },
+                    body: JSON.stringify({
+                        customer_pricing_setting_id: currentPricingSetting.id,
+                        enabled
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentPricingSetting = data.setting;
+                    alert(`Custom pricing ${enabled ? 'enabled' : 'disabled'} successfully`);
+                } else {
+                    alert('Failed to update pricing settings');
+                    document.getElementById('customPricingToggle').checked = !enabled;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to toggle custom pricing');
+                document.getElementById('customPricingToggle').checked = !enabled;
+            }
+        }
+
+        async function searchProducts() {
+            const query = document.getElementById('productSearch').value.trim();
+            if (!query) {
+                alert('Please enter a product name');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/admin/products/search`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + sessionStorage.getItem('token')
+                    },
+                    body: JSON.stringify({ query, shop: SHOP_DOMAIN })
+                });
+
+                const products = await response.json();
+                displayProducts(products);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to search products');
+            }
+        }
+
+        function displayProducts(products) {
+            const container = document.getElementById('productResults');
+            container.innerHTML = '';
+
+            products.forEach(product => {
+                product.variants.forEach(variant => {
+                    const div = document.createElement('div');
+                    div.className = 'border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition';
+                    div.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-semibold text-gray-900">${product.title}</h4>
+                                <p class="text-sm text-gray-600">${variant.title}</p>
+                                <p class="text-lg font-bold text-gray-900 mt-2">$${variant.price}</p>
+                            </div>
+                            <button 
+                                onclick='openPriceModal(${JSON.stringify({
+                                    product_id: product.id,
+                                    variant_id: variant.id,
+                                    product_title: product.title,
+                                    variant_title: variant.title,
+                                    price: variant.price
+                                })})' 
+                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                            >
+                                Set Price
+                            </button>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            });
+        }
+
+        function openPriceModal(product) {
+            selectedProduct = product;
+            document.getElementById('modalProductName').textContent = product.product_title;
+            document.getElementById('modalVariantName').textContent = product.variant_title;
+            document.getElementById('modalOriginalPrice').textContent = `$${product.price}`;
+            document.getElementById('customPriceInput').value = '';
+            document.getElementById('priceModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('priceModal').classList.add('hidden');
+            selectedProduct = null;
+        }
+
+        async function saveCustomPrice() {
+            const customPrice = document.getElementById('customPriceInput').value;
+            
+            if (!customPrice || customPrice <= 0) {
+                alert('Please enter a valid custom price');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/admin/custom-prices`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + sessionStorage.getItem('token')
+                    },
+                    body: JSON.stringify({
+                        customer_pricing_setting_id: currentPricingSetting.id,
+                        shopify_product_id: selectedProduct.product_id,
+                        shopify_variant_id: selectedProduct.variant_id,
+                        product_title: selectedProduct.product_title,
+                        variant_title: selectedProduct.variant_title,
+                        original_price: selectedProduct.price,
+                        custom_price: customPrice
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Custom price saved successfully!');
+                    closeModal();
+                    loadExistingPrices();
+                } else {
+                    alert('Failed to save custom price');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to save custom price');
+            }
+        }
+
+        async function loadExistingPrices() {
+            if (!currentPricingSetting) return;
+
+            try {
+                const response = await fetch(`${API_URL}/admin/customers/${currentPricingSetting.id}/prices`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + sessionStorage.getItem('token')
+                    }
+                });
+
+                const data = await response.json();
+                displayExistingPrices(data.prices);
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function displayExistingPrices(prices) {
+            const container = document.getElementById('existingPrices');
+            container.innerHTML = '';
+
+            if (prices.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">No custom prices set yet</p>';
+                return;
+            }
+
+            prices.forEach(price => {
+                const div = document.createElement('div');
+                div.className = 'border border-gray-200 rounded-lg p-4 bg-gray-50';
+                const discount = ((price.original_price - price.custom_price) / price.original_price * 100).toFixed(2);
+                
+                div.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-semibold text-gray-900">${price.product_title}</h4>
+                            <p class="text-sm text-gray-600">${price.variant_title || 'Default'}</p>
+                            <div class="flex gap-4 mt-2">
+                                <span class="text-sm text-gray-500">Original: <span class="line-through">${price.original_price}</span></span>
+                                <span class="text-sm font-semibold text-green-600">Custom: ${price.custom_price}</span>
+                                <span class="text-sm text-blue-600">${discount}% off</span>
+                            </div>
+                        </div>
+                        <button 
+                            onclick="deletePrice(${price.id})"
+                            class="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
+                        >
+                            Delete
+                        </button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        async function deletePrice(priceId) {
+            if (!confirm('Are you sure you want to delete this custom price?')) return;
+
+            try {
+                const response = await fetch(`${API_URL}/admin/custom-prices/${priceId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + sessionStorage.getItem('token')
+                    }
+                });
+
+                if (response.ok) {
+                    alert('Custom price deleted successfully');
+                    loadExistingPrices();
+                } else {
+                    alert('Failed to delete custom price');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to delete custom price');
+            }
+        }
+    </script>
+</body>
+</html>

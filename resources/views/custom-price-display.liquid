@@ -1,0 +1,123 @@
+{% comment %}
+  Shopify Theme Extension - Custom Price Display
+  Add this to your product page template or as a theme app extension
+{% endcomment %}
+
+<div id="custom-price-container" data-variant-id="{{ product.selected_or_first_available_variant.id }}" style="display: none;">
+  <div style="background: #10b981; color: white; padding: 12px; border-radius: 8px; margin: 16px 0;">
+    <div style="font-size: 14px; font-weight: 500; margin-bottom: 4px;">Your Custom Price</div>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span style="font-size: 24px; font-weight: bold;" id="custom-price-value"></span>
+      <span style="text-decoration: line-through; opacity: 0.8; font-size: 16px;" id="original-price-value"></span>
+      <span style="background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;" id="discount-percentage"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const API_URL = 'YOUR_LARAVEL_API_URL/api/storefront/custom-price';
+  const SHOP_DOMAIN = '{{ shop.permanent_domain }}';
+  
+  async function checkCustomPrice() {
+    // Get customer ID from Shopify
+    {% if customer %}
+      const customerId = {{ customer.id }};
+    {% else %}
+      return; // No logged-in customer
+    {% endif %}
+
+    const variantId = document.getElementById('custom-price-container').dataset.variantId;
+    
+    if (!variantId) return;
+
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          customer_id: customerId,
+          variant_id: variantId,
+          shop: SHOP_DOMAIN,
+          currency: '{{ cart.currency.iso_code }}'
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.has_custom_price) {
+        displayCustomPrice(data);
+      }
+    } catch (error) {
+      console.error('Error fetching custom price:', error);
+    }
+  }
+
+  function displayCustomPrice(data) {
+    const container = document.getElementById('custom-price-container');
+    const customPriceEl = document.getElementById('custom-price-value');
+    const originalPriceEl = document.getElementById('original-price-value');
+    const discountEl = document.getElementById('discount-percentage');
+
+    const discount = ((data.original_price - data.custom_price) / data.original_price * 100).toFixed(0);
+
+    customPriceEl.textContent = formatMoney(data.custom_price, data.currency);
+    originalPriceEl.textContent = formatMoney(data.original_price, data.currency);
+    discountEl.textContent = `${discount}% OFF`;
+
+    container.style.display = 'block';
+
+    // Hide original price
+    const priceElements = document.querySelectorAll('.price, .product-price, [data-price]');
+    priceElements.forEach(el => {
+      el.style.display = 'none';
+    });
+  }
+
+  function formatMoney(cents, currency) {
+    const amount = (cents / 100).toFixed(2);
+    const symbols = {
+      'USD': '$',
+      'EUR': '€',
+      'GBP': '£',
+      'INR': '₹'
+    };
+    const symbol = symbols[currency] || currency;
+    return `${symbol}${amount}`;
+  }
+
+  // Check on page load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkCustomPrice);
+  } else {
+    checkCustomPrice();
+  }
+
+  // Check when variant changes
+  document.addEventListener('variantChange', function(e) {
+    const container = document.getElementById('custom-price-container');
+    container.dataset.variantId = e.detail.variant.id;
+    container.style.display = 'none';
+    checkCustomPrice();
+  });
+})();
+</script>
+
+<style>
+#custom-price-container {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>
