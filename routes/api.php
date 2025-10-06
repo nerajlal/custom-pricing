@@ -27,7 +27,9 @@ Route::prefix('admin')->middleware(['auth.shopify'])->group(function () {
     Route::get('/customers/{id}/prices', [CustomPricingController::class, 'getCustomerPrices']);
     
     // Product management
+    Route::get('/products', [CustomPricingController::class, 'getProducts'])->name('products.index');
     Route::post('/products/search', [CustomPricingController::class, 'searchProducts']);
+    Route::get('/products/{id}', [CustomPricingController::class, 'getProduct'])->name('products.show');
     
     // Custom pricing
     Route::post('/custom-prices', [CustomPricingController::class, 'setCustomPrice']);
