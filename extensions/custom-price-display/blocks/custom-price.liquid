@@ -1,0 +1,246 @@
+{% comment %}
+  Theme App Extension - Custom Price Display Block
+  This block can be added to product pages via the theme customizer
+{% endcomment %}
+
+{% schema %}
+{
+  "name": "Custom Price Display",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "api_url",
+      "label": "API URL",
+      "default": "https://customprice.metora.in"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background Color",
+      "default": "#10b981"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#ffffff"
+    }
+  ]
+}
+{% endschema %}
+
+{% if customer %}
+<div class="custom-price-block" data-custom-price-block>
+  <style>
+    .custom-price-container {
+      background: {{ block.settings.background_color | default: '#10b981' }};
+      color: {{ block.settings.text_color | default: '#ffffff' }};
+      padding: 16px;
+      border-radius: 12px;
+      margin: 16px 0;
+      animation: slideIn 0.4s ease-out;
+      box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
+      display: none;
+    }
+    
+    .custom-price-container.active {
+      display: block;
+    }
+    
+    .custom-price-header {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      opacity: 0.95;
+    }
+    
+    .custom-price-main {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    
+    .custom-price-value {
+      font-size: 32px;
+      font-weight: bold;
+      letter-spacing: -0.5px;
+    }
+    
+    .custom-price-original {
+      text-decoration: line-through;
+      opacity: 0.8;
+      font-size: 18px;
+    }
+    
+    .custom-price-badge {
+      background: rgba(255, 255, 255, 0.25);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      backdrop-filter: blur(10px);
+    }
+
+    .custom-price-loading {
+      padding: 12px;
+      text-align: center;
+      opacity: 0.8;
+    }
+    
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+
+  <div id="custom-price-display-{{ product.id }}" class="custom-price-container">
+    <div class="custom-price-loading">Checking for your special price...</div>
+  </div>
+
+  <script>
+    (function() {
+      'use strict';
+      
+      const CONFIG = {
+        apiUrl: '{{ block.settings.api_url | default: "https://customprice.metora.in" }}/api/storefront/custom-price',
+        customerId: {{ customer.id }},
+        shop: '{{ shop.permanent_domain }}',
+        currency: '{{ cart.currency.iso_code }}',
+        currencySymbol: '{{ cart.currency.symbol }}',
+        productId: {{ product.id }}
+      };
+
+      let currentVariantId = {{ product.selected_or_first_available_variant.id }};
+      let container = document.getElementById('custom-price-display-{{ product.id }}');
+
+      async function checkCustomPrice(variantId) {
+        if (!container) return;
+
+        try {
+          const response = await fetch(CONFIG.apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+              customer_id: CONFIG.customerId,
+              variant_id: variantId,
+              shop: CONFIG.shop,
+              currency: CONFIG.currency
+            })
+          });
+
+          if (!response.ok) {
+            hideCustomPrice();
+            return;
+          }
+
+          const data = await response.json();
+
+          if (data.has_custom_price) {
+            displayCustomPrice(data);
+          } else {
+            hideCustomPrice();
+          }
+        } catch (error) {
+          console.error('Custom pricing error:', error);
+          hideCustomPrice();
+        }
+      }
+
+      function displayCustomPrice(data) {
+        if (!container) return;
+
+        const discount = Math.round(((data.original_price - data.custom_price) / data.original_price) * 100);
+        
+        container.innerHTML = `
+          <div class="custom-price-header">🎉 Your Exclusive Price</div>
+          <div class="custom-price-main">
+            <span class="custom-price-value">${formatMoney(data.custom_price)}</span>
+            <span class="custom-price-original">${formatMoney(data.original_price)}</span>
+            <span class="custom-price-badge">${discount}% OFF</span>
+          </div>
+        `;
+        
+        container.classList.add('active');
+
+        // Emit custom event for theme integration
+        document.dispatchEvent(new CustomEvent('customPriceLoaded', {
+          detail: { customPrice: data.custom_price, originalPrice: data.original_price }
+        }));
+      }
+
+      function hideCustomPrice() {
+        if (container) {
+          container.classList.remove('active');
+        }
+      }
+
+      function formatMoney(cents) {
+        const amount = (cents / 100).toFixed(2);
+        return CONFIG.currencySymbol + amount;
+      }
+
+      // Watch for variant changes
+      function initVariantWatcher() {
+        // Shopify theme events
+        document.addEventListener('variant:change', function(e) {
+          if (e.detail && e.detail.variant) {
+            currentVariantId = e.detail.variant.id;
+            checkCustomPrice(currentVariantId);
+          }
+        });
+
+        // Form selectors
+        const form = document.querySelector('form[action*="/cart/add"]');
+        if (form) {
+          const variantInput = form.querySelector('[name="id"]');
+          if (variantInput) {
+            const observer = new MutationObserver(() => {
+              const newVariantId = variantInput.value;
+              if (newVariantId && newVariantId !== currentVariantId) {
+                currentVariantId = newVariantId;
+                checkCustomPrice(currentVariantId);
+              }
+            });
+            observer.observe(variantInput, { attributes: true, attributeFilter: ['value'] });
+          }
+        }
+
+        // Variant selectors
+        const selectors = document.querySelectorAll('[name="id"], select[data-index^="option"]');
+        selectors.forEach(selector => {
+          selector.addEventListener('change', function() {
+            const newVariantId = this.value;
+            if (newVariantId && newVariantId !== currentVariantId) {
+              currentVariantId = newVariantId;
+              checkCustomPrice(currentVariantId);
+            }
+          });
+        });
+      }
+
+      // Initialize
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          checkCustomPrice(currentVariantId);
+          initVariantWatcher();
+        });
+      } else {
+        checkCustomPrice(currentVariantId);
+        initVariantWatcher();
+      }
+
+    })();
+  </script>
+</div>
+{% endif %}

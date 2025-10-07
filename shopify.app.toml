@@ -1,0 +1,25 @@
+# Learn more about configuring your Shopify app at shopify.dev/docs/apps/tools/cli/configuration
+
+name = "custom-price-neraj"
+client_id = "90538bbd4e9eb6fa104f282828713b54"
+application_url = "https://customprice.metora.in"
+embedded = true
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_customers,read_products,read_orders"
+
+[auth]
+redirect_urls = [
+  "https://customprice.metora.in/auth/callback"
+]
+
+[webhooks]
+api_version = "2024-01"
+
+[pos]
+embedded = false
+
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = "neraj-test-store.myshopify.com"
