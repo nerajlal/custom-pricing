@@ -30,3 +30,20 @@ Route::get('/', function () {
     return redirect('/install');
 });
 
+// App Proxy Routes (accessed via Shopify proxy)
+Route::prefix('app-proxy')->group(function () {
+    // Serve the custom price JavaScript
+    Route::get('/script.js', function() {
+        $jsContent = view('app-proxy.custom-price-script')->render();
+        
+        return response($jsContent)
+            ->header('Content-Type', 'application/javascript; charset=utf-8')
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Cache-Control', 'public, max-age=3600');
+    })->name('app-proxy.script');
+
+    // Health check endpoint
+    Route::get('/ping', function() {
+        return response()->json(['status' => 'ok', 'app' => 'custom-pricing']);
+    });
+});
