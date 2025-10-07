@@ -47,3 +47,7 @@ Route::prefix('app-proxy')->group(function () {
         return response()->json(['status' => 'ok', 'app' => 'custom-pricing']);
     });
 });
+
+Route::get('/installation', function() {
+    return view('installation-guide');
+})->name('installation');
