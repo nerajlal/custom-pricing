@@ -46,7 +46,10 @@ class ShopifyAuthController extends Controller
             'state' => $nonce
         ]);
 
-        return redirect($installUrl);
+        // Add ngrok bypass header
+        return redirect($installUrl)->withHeaders([
+            'ngrok-skip-browser-warning' => 'true'
+        ]);
     }
 
     // Step 2: Handle OAuth callback
@@ -66,8 +69,10 @@ class ShopifyAuthController extends Controller
             return response()->json(['error' => 'HMAC verification failed'], 400);
         }
 
-        // Exchange code for access token
-        $response = Http::post("https://{$shop}/admin/oauth/access_token", [
+        // Exchange code for access token - WITH SSL FIX
+        $response = Http::withOptions([
+            'verify' => false
+        ])->post("https://{$shop}/admin/oauth/access_token", [
             'client_id' => $this->apiKey,
             'client_secret' => $this->apiSecret,
             'code' => $code
@@ -85,11 +90,14 @@ class ShopifyAuthController extends Controller
             // Create session token for frontend
             $token = $this->createSessionToken($shop);
 
-            // Redirect to app with token
-            return redirect("/app?shop={$shop}&token={$token}");
+            // FIXED: Redirect to full ngrok URL instead of relative path
+            return redirect(env('APP_URL') . "/app?shop={$shop}&token={$token}");
         }
 
-        return response()->json(['error' => 'Failed to get access token'], 500);
+        return response()->json([
+            'error' => 'Failed to get access token',
+            'details' => $response->json()
+        ], 500);
     }
 
     // Verify Shopify HMAC

@@ -3,93 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Custom Pricing App</title>
+    <title>Custom Pricing Manager</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
 </head>
 <body class="bg-gray-50">
-    <div class="min-h-screen p-6">
-        <div class="max-w-6xl mx-auto">
-            <!-- Header -->
-            <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
-                <h1 class="text-3xl font-bold text-gray-900">Custom Pricing Manager</h1>
-                <p class="text-gray-600 mt-2">Set custom prices for specific customers</p>
-            </div>
-
-            <!-- Customer Search Section -->
-            <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
-                <h2 class="text-xl font-semibold text-gray-900 mb-4">Search Customer</h2>
-                
-                <div class="flex gap-3">
-                    <input 
-                        type="email" 
-                        id="customerEmail" 
-                        placeholder="Enter customer email..."
-                        class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                    <button 
-                        onclick="searchCustomer()"
-                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-                    >
-                        Search
-                    </button>
+    <div id="app">
+        <div class="min-h-screen p-6">
+            <div class="max-w-6xl mx-auto">
+                <!-- Header -->
+                <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                    <h1 class="text-3xl font-bold text-gray-900">Custom Pricing Manager</h1>
+                    <p class="text-gray-600 mt-2">Set custom prices for specific customers</p>
                 </div>
 
-                <!-- Customer Result -->
-                <div id="customerResult" class="hidden mt-6">
-                    <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                        <div class="flex items-start justify-between">
-                            <div>
-                                <h3 class="font-semibold text-lg" id="customerName"></h3>
-                                <p class="text-gray-600" id="customerEmailDisplay"></p>
-                                <p class="text-sm text-gray-500 mt-1" id="customerId"></p>
-                            </div>
-                            
-                            <!-- Toggle Switch -->
-                            <div class="flex items-center gap-3">
-                                <span class="text-sm font-medium text-gray-700">Enable Custom Pricing</span>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input 
-                                        type="checkbox" 
-                                        id="customPricingToggle"
-                                        onchange="toggleCustomPricing()"
-                                        class="sr-only peer"
-                                    >
-                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                </label>
+                <!-- Customer Search Section -->
+                <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Search Customer</h2>
+                    
+                    <div class="flex gap-3">
+                        <input 
+                            type="email" 
+                            id="customerEmail" 
+                            placeholder="Enter customer email..."
+                            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                        <button 
+                            onclick="searchCustomer()"
+                            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                        >
+                            Search
+                        </button>
+                    </div>
+
+                    <!-- Customer Result -->
+                    <div id="customerResult" class="hidden mt-6">
+                        <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <h3 class="font-semibold text-lg" id="customerName"></h3>
+                                    <p class="text-gray-600" id="customerEmailDisplay"></p>
+                                    <p class="text-sm text-gray-500 mt-1" id="customerId"></p>
+                                </div>
+                                
+                                <!-- Toggle Switch -->
+                                <div class="flex items-center gap-3">
+                                    <span class="text-sm font-medium text-gray-700">Enable Custom Pricing</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input 
+                                            type="checkbox" 
+                                            id="customPricingToggle"
+                                            onchange="toggleCustomPricing()"
+                                            class="sr-only peer"
+                                        >
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Product Search & Pricing Section -->
-            <div id="pricingSection" class="hidden">
-                <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
-                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Set Custom Prices</h2>
-                    
-                    <div class="flex gap-3 mb-4">
-                        <input 
-                            type="text" 
-                            id="productSearch" 
-                            placeholder="Search products..."
-                            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                        <button 
-                            onclick="searchProducts()"
-                            class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
-                        >
-                            Search Products
-                        </button>
+                <!-- Product Search & Pricing Section -->
+                <div id="pricingSection" class="hidden">
+                    <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                        <h2 class="text-xl font-semibold text-gray-900 mb-4">Set Custom Prices</h2>
+                        
+                        <div class="flex gap-3 mb-4">
+                            <input 
+                                type="text" 
+                                id="productSearch" 
+                                placeholder="Search products..."
+                                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                            <button 
+                                onclick="searchProducts()"
+                                class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                            >
+                                Search Products
+                            </button>
+                        </div>
+
+                        <!-- Product Results -->
+                        <div id="productResults" class="grid grid-cols-1 gap-4"></div>
                     </div>
 
-                    <!-- Product Results -->
-                    <div id="productResults" class="grid grid-cols-1 gap-4"></div>
-                </div>
-
-                <!-- Existing Custom Prices -->
-                <div class="bg-white rounded-lg shadow-sm p-6">
-                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Current Custom Prices</h2>
-                    <div id="existingPrices" class="space-y-3"></div>
+                    <!-- Existing Custom Prices -->
+                    <div class="bg-white rounded-lg shadow-sm p-6">
+                        <h2 class="text-xl font-semibold text-gray-900 mb-4">Current Custom Prices</h2>
+                        <div id="existingPrices" class="space-y-3"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -143,9 +146,23 @@
     </div>
 
     <script>
-        // Global variables
-        const API_URL = 'https://compatriotic-joe-shamably.ngrok-free.dev/api';
-        const SHOP_DOMAIN = 'https://my-custom-pricing-store.myshopify.com/';
+        // Get shop and host from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const shop = urlParams.get('shop') || '{{ request()->query("shop") }}';
+        const host = urlParams.get('host') || '';
+        
+        // Initialize Shopify App Bridge
+        const AppBridge = window['app-bridge'];
+        const createApp = AppBridge.default;
+        const app = createApp({
+            apiKey: '{{ env("SHOPIFY_API_KEY") }}',
+            host: host || btoa(shop + '/admin'),
+            forceRedirect: true
+        });
+
+        // API Configuration
+        const API_URL = '{{ env("APP_URL") }}/api';
+        const SHOP_DOMAIN = shop;
         let currentCustomer = null;
         let currentPricingSetting = null;
         let selectedProduct = null;
@@ -162,8 +179,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + sessionStorage.getItem('token'),
-                        'ngrok-skip-browser-warning': 'true'  // Add this line
+                        'ngrok-skip-browser-warning': 'true'
                     },
                     body: JSON.stringify({ email, shop: SHOP_DOMAIN })
                 });
@@ -202,7 +218,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + sessionStorage.getItem('token')
+                        'ngrok-skip-browser-warning': 'true'
                     },
                     body: JSON.stringify({
                         customer_pricing_setting_id: currentPricingSetting.id,
@@ -238,7 +254,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + sessionStorage.getItem('token')
+                        'ngrok-skip-browser-warning': 'true'
                     },
                     body: JSON.stringify({ query, shop: SHOP_DOMAIN })
                 });
@@ -312,7 +328,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + sessionStorage.getItem('token')
+                        'ngrok-skip-browser-warning': 'true'
                     },
                     body: JSON.stringify({
                         customer_pricing_setting_id: currentPricingSetting.id,
@@ -346,7 +362,7 @@
             try {
                 const response = await fetch(`${API_URL}/admin/customers/${currentPricingSetting.id}/prices`, {
                     headers: {
-                        'Authorization': 'Bearer ' + sessionStorage.getItem('token')
+                        'ngrok-skip-browser-warning': 'true'
                     }
                 });
 
@@ -377,8 +393,8 @@
                             <h4 class="font-semibold text-gray-900">${price.product_title}</h4>
                             <p class="text-sm text-gray-600">${price.variant_title || 'Default'}</p>
                             <div class="flex gap-4 mt-2">
-                                <span class="text-sm text-gray-500">Original: <span class="line-through">${price.original_price}</span></span>
-                                <span class="text-sm font-semibold text-green-600">Custom: ${price.custom_price}</span>
+                                <span class="text-sm text-gray-500">Original: <span class="line-through">$${price.original_price}</span></span>
+                                <span class="text-sm font-semibold text-green-600">Custom: $${price.custom_price}</span>
                                 <span class="text-sm text-blue-600">${discount}% off</span>
                             </div>
                         </div>
@@ -401,7 +417,7 @@
                 const response = await fetch(`${API_URL}/admin/custom-prices/${priceId}`, {
                     method: 'DELETE',
                     headers: {
-                        'Authorization': 'Bearer ' + sessionStorage.getItem('token')
+                        'ngrok-skip-browser-warning': 'true'
                     }
                 });
 

@@ -14,13 +14,19 @@ use App\Http\Controllers\ShopifyAuthController;
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
-});
 
 
-Route::get('/install', [ShopifyAuthController::class, 'install']);
-Route::get('/auth/callback', [ShopifyAuthController::class, 'callback']);
+// Shopify OAuth routes
+Route::get('/install', [ShopifyAuthController::class, 'install'])->name('install');
+Route::get('/auth/callback', [ShopifyAuthController::class, 'callback'])->name('auth.callback');
+
+// App interface (after authentication)
 Route::get('/app', function () {
-    return view('app'); // Your admin interface
+    return view('app');
+})->name('app');
+
+// Optional: Redirect root to install
+Route::get('/', function () {
+    return redirect('/install');
 });
+
