@@ -114,19 +114,16 @@
     return null;
   }
 
-  let observer;
-
   async function processProductCards() {
-    if (observer) {
-      observer.disconnect();
-    }
+    const productCards = document.querySelectorAll('.product-card:not([data-custom-price-processed]), .card:not([data-custom-price-processed]), .grid__item:not([data-custom-price-processed]), .product-item:not([data-custom-price-processed]), [data-product-id]:not([data-custom-price-processed])');
 
-    const productCards = document.querySelectorAll('.product-card, .card, .grid__item, .product-item, [data-product-id]');
-    const priceCheckPromises = [];
+    if (productCards.length === 0) return;
 
-    console.log('🔍 Found', productCards.length, 'product cards');
+    console.log('🔍 Found', productCards.length, 'new product cards to process');
 
-    productCards.forEach(function(card, index) {
+    for (const card of productCards) {
+      card.setAttribute('data-custom-price-processed', 'true');
+
       let variantId = card.getAttribute('data-variant-id');
       
       if (!variantId) {
@@ -141,20 +138,8 @@
       }
 
       if (variantId) {
-        console.log('📦 Processing card', index, 'with variant:', variantId);
-        priceCheckPromises.push(checkProductPrice(card, variantId));
-      } else {
-        console.log('⚠️ No variant ID found for card', index);
+        await checkProductPrice(card, variantId);
       }
-    });
-
-    await Promise.all(priceCheckPromises);
-
-    if (observer) {
-      observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-      });
     }
   }
 
@@ -175,7 +160,7 @@
     debouncedProcessProductCards();
   }
 
-  observer = new MutationObserver(() => {
+  const observer = new MutationObserver(() => {
     debouncedProcessProductCards();
   });
 
