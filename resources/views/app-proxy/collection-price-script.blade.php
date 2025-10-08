@@ -37,16 +37,26 @@
     return symbols[currency] || currency + ' ';
   }
 
+  const priceCache = {};
+
   async function checkProductPrice(productCard, variantId) {
     if (!variantId) return;
+
+    // If we have a cached price, use it.
+    if (priceCache[variantId]) {
+      if (priceCache[variantId].has_custom_price) {
+        displayCustomPriceOnCard(productCard, priceCache[variantId]);
+      }
+      return;
+    }
+
+    // Mark as fetching to prevent multiple requests for the same variant.
+    priceCache[variantId] = { fetching: true };
 
     try {
       const response = await fetch(CONFIG.apiUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({
           customer_id: parseInt(customerId),
           variant_id: parseInt(variantId),
@@ -55,15 +65,19 @@
         })
       });
 
-      if (!response.ok) return;
+      if (!response.ok) {
+        priceCache[variantId] = { has_custom_price: false }; // Cache failure to prevent re-fetching
+        return;
+      }
 
       const data = await response.json();
-
+      priceCache[variantId] = data; // Cache the successful response
       if (data.has_custom_price) {
         displayCustomPriceOnCard(productCard, data);
       }
     } catch (error) {
       console.error('❌ Error checking price for variant:', variantId, error);
+      priceCache[variantId] = { has_custom_price: false }; // Cache failure
     }
   }
 
@@ -71,19 +85,19 @@
     const currencySymbol = getCurrencySymbol(CONFIG.currency);
     const priceElement = productCard.querySelector('.price, .product-price, [data-price], .card__information .price');
 
-    if (!priceElement) {
-      console.log('⚠️ Price element not found on card.');
-      return;
-    }
+    if (!priceElement) return;
 
-    // Directly update the price element's content to be more resilient
-    priceElement.style.display = 'block'; // Ensure the price element is visible
-    priceElement.innerHTML = `
+    const newPriceHTML = `
       <span style="font-weight: bold; color: #059669;">${currencySymbol}${parseFloat(data.custom_price).toFixed(2)}</span>
       <s style="opacity: 0.7; margin-left: 6px;">${currencySymbol}${parseFloat(data.original_price).toFixed(2)}</s>
     `;
-    
-    console.log('✅ Custom price displayed on card for variant:', data);
+
+    // Only update if the content is different, to prevent flicker and unnecessary DOM manipulation
+    if (priceElement.innerHTML.trim() !== newPriceHTML.trim()) {
+        priceElement.style.display = 'block';
+        priceElement.innerHTML = newPriceHTML;
+        console.log('✅ Custom price updated for variant:', data.variant_id);
+    }
   }
 
   function extractVariantId(productCard) {
@@ -103,52 +117,32 @@
         return formData.value;
       }
     }
-
     return null;
   }
 
-  async function processProductCards() {
-    const productCards = document.querySelectorAll('.product-card:not([data-custom-price-processed]), .card:not([data-custom-price-processed]), .grid__item:not([data-custom-price-processed]), .product-item:not([data-custom-price-processed]), [data-product-id]:not([data-custom-price-processed])');
+  function processProductCards() {
+    const productCards = document.querySelectorAll('.product-card, .card, .grid__item, .product-item, [data-product-id]');
 
-    if (productCards.length === 0) return;
-
-    console.log('🔍 Found', productCards.length, 'new product cards to process');
-
-    for (const card of productCards) {
-      card.setAttribute('data-custom-price-processed', 'true');
-
+    productCards.forEach(card => {
       let variantId = card.getAttribute('data-variant-id');
-      
       if (!variantId) {
         variantId = extractVariantId(card);
       }
-
       if (!variantId) {
         const input = card.querySelector('input[name="id"]');
-        if (input) {
-          variantId = input.value;
-        }
+        if (input) variantId = input.value;
       }
 
-      if (variantId) {
-        await checkProductPrice(card, variantId);
+      if (variantId && !priceCache[variantId]?.fetching) {
+        checkProductPrice(card, variantId);
+      } else if (variantId && priceCache[variantId]?.has_custom_price) {
+        // If the price is cached, re-apply it in case the theme re-rendered
+        displayCustomPriceOnCard(card, priceCache[variantId]);
       }
-    }
+    });
   }
 
-  function debounce(func, wait) {
-    let timeout;
-    return function(...args) {
-      const context = this;
-      clearTimeout(timeout);
-      timeout = setTimeout(() => func.apply(context, args), wait);
-    };
-  }
-
-  // Initial run
-  processProductCards();
-
-  // Set up a poller to catch products that are loaded dynamically
+  // Set up a poller to constantly check and apply prices
   setInterval(processProductCards, 500);
 
   console.log('✨ Collection pricing initialized');
