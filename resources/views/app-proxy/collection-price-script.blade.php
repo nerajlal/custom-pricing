@@ -114,9 +114,16 @@
     return null;
   }
 
-  function processProductCards() {
+  let observer;
+
+  async function processProductCards() {
+    if (observer) {
+      observer.disconnect();
+    }
+
     const productCards = document.querySelectorAll('.product-card, .card, .grid__item, .product-item, [data-product-id]');
-    
+    const priceCheckPromises = [];
+
     console.log('🔍 Found', productCards.length, 'product cards');
 
     productCards.forEach(function(card, index) {
@@ -135,17 +142,20 @@
 
       if (variantId) {
         console.log('📦 Processing card', index, 'with variant:', variantId);
-        checkProductPrice(card, variantId);
+        priceCheckPromises.push(checkProductPrice(card, variantId));
       } else {
         console.log('⚠️ No variant ID found for card', index);
       }
     });
-  }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', processProductCards);
-  } else {
-    processProductCards();
+    await Promise.all(priceCheckPromises);
+
+    if (observer) {
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+      });
+    }
   }
 
   function debounce(func, wait) {
@@ -157,26 +167,16 @@
     };
   }
 
-  const debouncedProcessProductCards = debounce(processProductCards, 500);
+  const debouncedProcessProductCards = debounce(processProductCards, 300);
 
-  const observer = new MutationObserver(function(mutations) {
-    const meaningfulChange = mutations.some(mutation =>
-      Array.from(mutation.addedNodes).some(node => {
-        // Ignore changes caused by the script itself (i.e., adding the price badge)
-        if (node.nodeType === 1 && node.classList.contains('custom-price-badge')) {
-          return false;
-        }
-        // Also ignore text nodes that are just whitespace
-        if (node.nodeType === 3 && node.textContent.trim() === '') {
-          return false;
-        }
-        return true;
-      })
-    );
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', debouncedProcessProductCards);
+  } else {
+    debouncedProcessProductCards();
+  }
 
-    if (meaningfulChange) {
-      debouncedProcessProductCards();
-    }
+  observer = new MutationObserver(() => {
+    debouncedProcessProductCards();
   });
 
   observer.observe(document.body, {
