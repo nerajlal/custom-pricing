@@ -1,18 +1,22 @@
-
-
 (function() {
   'use strict';
   
-  // Check if we're on a product page
-  if (!window.ShopifyAnalytics || !window.ShopifyAnalytics.meta.product) {
+  console.log('🎨 Custom Pricing Script Loaded');
+
+  // Get customer ID from meta tag
+  const customerMeta = document.querySelector('meta[name="customer-id"]');
+  if (!customerMeta) {
+    console.log('⚠️ No customer logged in');
     return;
   }
 
-  // Check if customer is logged in
-  const isCustomerLoggedIn = document.body.classList.contains('customer-logged-in') || 
-                            document.querySelector('[data-customer-id]');
-  
-  if (!isCustomerLoggedIn) {
+  const customerId = customerMeta.content;
+  console.log('👤 Customer ID:', customerId);
+
+  // Check if we have a variant ID on the page
+  const variantInput = document.querySelector('input[name="id"], select[name="id"]');
+  if (!variantInput) {
+    console.log('⚠️ Not a product page - no variant selector found');
     return;
   }
 
@@ -22,128 +26,100 @@
     currency: window.Shopify.currency.active
   };
 
-  // Get customer ID from Shopify's customer data
-  function getCustomerId() {
-    // Method 1: From Shopify Analytics
-    if (window.ShopifyAnalytics && window.ShopifyAnalytics.meta && window.ShopifyAnalytics.meta.page) {
-      const customerId = window.ShopifyAnalytics.meta.page.customerId;
-      if (customerId) return customerId;
-    }
+  console.log('⚙️ Config:', CONFIG);
 
-    // Method 2: From meta tag
-    const metaTag = document.querySelector('meta[name="customer-id"]');
-    if (metaTag) return metaTag.content;
-    
-    // Method 3: From data attribute
-    const dataAttr = document.querySelector('[data-customer-id]');
-    if (dataAttr) return dataAttr.dataset.customerId;
+  let currentVariantId = variantInput.value || variantInput.options?.[variantInput.selectedIndex]?.value;
+  console.log('🏷️ Initial variant ID:', currentVariantId);
 
-    // Method 4: Try to extract from page HTML (last resort)
-    const scripts = document.querySelectorAll('script');
-    for (let script of scripts) {
-      const match = script.textContent.match(/customer_id['":\s]+(\d+)/i);
-      if (match) return match[1];
+  // Create and inject styles
+  const styles = document.createElement('style');
+  styles.textContent = `
+    .custom-price-container {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      padding: 16px;
+      border-radius: 12px;
+      margin: 16px 0;
+      animation: customPriceSlideIn 0.4s ease-out;
+      box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
+      display: none;
     }
     
-    return null;
-  }
+    .custom-price-container.active {
+      display: block;
+    }
+    
+    .custom-price-header {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      opacity: 0.95;
+    }
+    
+    .custom-price-main {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    
+    .custom-price-value {
+      font-size: 32px;
+      font-weight: bold;
+      letter-spacing: -0.5px;
+    }
+    
+    .custom-price-original {
+      text-decoration: line-through;
+      opacity: 0.8;
+      font-size: 18px;
+    }
+    
+    .custom-price-badge {
+      background: rgba(255, 255, 255, 0.25);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    
+    @keyframes customPriceSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  `;
+  document.head.appendChild(styles);
 
-  const customerId = getCustomerId();
-  console.log('Custom Pricing: Customer ID =', customerId);
+  // Create container
+  const container = document.createElement('div');
+  container.id = 'metora-custom-price-container';
+  container.className = 'custom-price-container';
+  container.innerHTML = '<div style="padding: 12px; text-align: center; opacity: 0.8;">Checking for your special price...</div>';
   
-  if (!customerId) {
-    console.log('Custom Pricing: No customer logged in');
+  // Find where to inject (look for price elements)
+  const priceElement = document.querySelector('.product__price, .price, [data-price], .product-price, .price__container');
+  if (priceElement) {
+    priceElement.parentNode.insertBefore(container, priceElement.nextSibling);
+    console.log('✅ Container injected successfully');
+  } else {
+    console.error('❌ Could not find price element to inject container');
     return;
   }
 
-  // Create and inject styles
-  const styles = `
-    <style>
-      .custom-price-container {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        color: white;
-        padding: 16px;
-        border-radius: 12px;
-        margin: 16px 0;
-        animation: customPriceSlideIn 0.4s ease-out;
-        box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
-        display: none;
-      }
-      
-      .custom-price-container.active {
-        display: block;
-      }
-      
-      .custom-price-header {
-        font-size: 14px;
-        font-weight: 600;
-        margin-bottom: 8px;
-        opacity: 0.95;
-      }
-      
-      .custom-price-main {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        flex-wrap: wrap;
-      }
-      
-      .custom-price-value {
-        font-size: 32px;
-        font-weight: bold;
-        letter-spacing: -0.5px;
-      }
-      
-      .custom-price-original {
-        text-decoration: line-through;
-        opacity: 0.8;
-        font-size: 18px;
-      }
-      
-      .custom-price-badge {
-        background: rgba(255, 255, 255, 0.25);
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 13px;
-        font-weight: 700;
-      }
-      
-      @keyframes customPriceSlideIn {
-        from {
-          opacity: 0;
-          transform: translateY(-10px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-    </style>
-  `;
-  
-  // Inject styles
-  document.head.insertAdjacentHTML('beforeend', styles);
-
-  // Create container and inject it
-  function injectContainer() {
-    const priceElement = document.querySelector('.product__price, .price, [data-price], .product-price');
-    if (!priceElement) return null;
-
-    const container = document.createElement('div');
-    container.id = 'metora-custom-price-container';
-    container.className = 'custom-price-container';
-    container.innerHTML = '<div style="padding: 12px; text-align: center; opacity: 0.8;">Checking for your special price...</div>';
-    
-    priceElement.parentNode.insertBefore(container, priceElement.nextSibling);
-    return container;
-  }
-
-  const container = injectContainer();
-  if (!container) return;
-
-  let currentVariantId = window.ShopifyAnalytics.meta.product.variants[0].id;
-
   async function checkCustomPrice(variantId) {
+    if (!variantId) {
+      console.warn('⚠️ No variant ID provided');
+      return;
+    }
+
+    console.log('🔍 Checking custom price for variant:', variantId);
+    
     try {
       const response = await fetch(CONFIG.apiUrl, {
         method: 'POST',
@@ -159,27 +135,33 @@
         })
       });
 
+      console.log('📡 API Response status:', response.status);
+
       if (!response.ok) {
+        console.warn('⚠️ API request failed');
         hideCustomPrice();
         return;
       }
 
       const data = await response.json();
+      console.log('📦 API Response:', data);
 
       if (data.has_custom_price) {
+        console.log('🎉 Custom price found! Displaying...');
         displayCustomPrice(data);
       } else {
+        console.log('ℹ️ No custom price for this product');
         hideCustomPrice();
       }
     } catch (error) {
-      console.error('Custom pricing error:', error);
+      console.error('❌ Error:', error);
       hideCustomPrice();
     }
   }
 
   function displayCustomPrice(data) {
     const discount = Math.round(((data.original_price - data.custom_price) / data.original_price) * 100);
-    const currencySymbol = window.Shopify.currency.active === 'USD' ? '$' : window.Shopify.currency.active;
+    const currencySymbol = CONFIG.currency === 'USD' ? '$' : CONFIG.currency;
     
     container.innerHTML = `
       <div class="custom-price-header">🎉 Your Exclusive Price</div>
@@ -191,6 +173,7 @@
     `;
     
     container.classList.add('active');
+    console.log('✅ Custom price displayed');
   }
 
   function hideCustomPrice() {
@@ -203,14 +186,30 @@
   }
 
   // Watch for variant changes
-  document.addEventListener('variant:change', function(e) {
-    if (e.detail && e.detail.variant) {
-      currentVariantId = e.detail.variant.id;
-      checkCustomPrice(currentVariantId);
-    }
+  variantInput.addEventListener('change', function() {
+    currentVariantId = this.value || this.options?.[this.selectedIndex]?.value;
+    console.log('🔄 Variant changed to:', currentVariantId);
+    checkCustomPrice(currentVariantId);
   });
 
-  // Initialize
+  // Also watch for option selectors
+  const optionSelectors = document.querySelectorAll('select[data-index^="option"], input[type="radio"][name*="option"]');
+  optionSelectors.forEach(selector => {
+    selector.addEventListener('change', function() {
+      setTimeout(() => {
+        const newVariantId = variantInput.value || variantInput.options?.[variantInput.selectedIndex]?.value;
+        if (newVariantId && newVariantId !== currentVariantId) {
+          currentVariantId = newVariantId;
+          console.log('🔄 Variant changed to:', currentVariantId);
+          checkCustomPrice(currentVariantId);
+        }
+      }, 100);
+    });
+  });
+
+  // Initial check
   checkCustomPrice(currentVariantId);
+
+  console.log('✨ Custom Pricing initialized successfully');
 
 })();
