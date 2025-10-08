@@ -1,9 +1,15 @@
 (function() {
   'use strict';
   
+  // Prevent multiple executions
+  if (window.metoraProductPricingLoaded) {
+    console.log('⚠️ Product script already loaded, skipping');
+    return;
+  }
+  window.metoraProductPricingLoaded = true;
+  
   console.log('🎨 Custom Pricing Script Loaded');
 
-  // Get customer ID from meta tag
   const customerMeta = document.querySelector('meta[name="customer-id"]');
   if (!customerMeta) {
     console.log('⚠️ No customer logged in');
@@ -13,7 +19,6 @@
   const customerId = customerMeta.content;
   console.log('👤 Customer ID:', customerId);
 
-  // Check if we have a variant ID on the page
   const variantInput = document.querySelector('input[name="id"], select[name="id"]');
   if (!variantInput) {
     console.log('⚠️ Not a product page - no variant selector found');
@@ -28,93 +33,44 @@
 
   console.log('⚙️ Config:', CONFIG);
 
-  let currentVariantId = variantInput.value || variantInput.options?.[variantInput.selectedIndex]?.value;
+  let currentVariantId = variantInput.value || (variantInput.options && variantInput.options[variantInput.selectedIndex] ? variantInput.options[variantInput.selectedIndex].value : null);
   console.log('🏷️ Initial variant ID:', currentVariantId);
 
-  // Create and inject styles
   const styles = document.createElement('style');
-  styles.textContent = `
-    .custom-price-container {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      color: white;
-      padding: 16px;
-      border-radius: 12px;
-      margin: 16px 0;
-      animation: customPriceSlideIn 0.4s ease-out;
-      box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
-      display: none;
-    }
-    
-    .custom-price-container.active {
-      display: block;
-    }
-    
-    .custom-price-header {
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 8px;
-      opacity: 0.95;
-    }
-    
-    .custom-price-main {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-    
-    .custom-price-value {
-      font-size: 32px;
-      font-weight: bold;
-      letter-spacing: -0.5px;
-    }
-    
-    .custom-price-original {
-      text-decoration: line-through;
-      opacity: 0.8;
-      font-size: 18px;
-    }
-    
-    .custom-price-badge {
-      background: rgba(255, 255, 255, 0.25);
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: 700;
-    }
-    
-    @keyframes customPriceSlideIn {
-      from {
-        opacity: 0;
-        transform: translateY(-10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-  `;
+  styles.textContent = '#metora-custom-price-container{background:linear-gradient(135deg,#10b981 0%,#059669 100%)!important;color:white!important;padding:20px!important;border-radius:12px!important;margin:16px 0!important;box-shadow:0 4px 6px rgba(16,185,129,0.2)!important;display:none!important;visibility:visible!important;opacity:1!important;position:relative!important;z-index:100!important;width:100%!important;max-width:600px!important}#metora-custom-price-container.active{display:block!important}#metora-custom-price-container .custom-price-header{font-size:14px!important;font-weight:600!important;margin-bottom:8px!important;opacity:0.95!important}#metora-custom-price-container .custom-price-main{display:flex!important;align-items:center!important;gap:16px!important;flex-wrap:wrap!important}#metora-custom-price-container .custom-price-value{font-size:32px!important;font-weight:bold!important}#metora-custom-price-container .custom-price-original{text-decoration:line-through!important;opacity:0.8!important;font-size:18px!important}#metora-custom-price-container .custom-price-badge{background:rgba(255,255,255,0.25)!important;padding:6px 12px!important;border-radius:20px!important;font-size:13px!important;font-weight:700!important}';
   document.head.appendChild(styles);
 
-  // Create container
   const container = document.createElement('div');
   container.id = 'metora-custom-price-container';
-  container.className = 'custom-price-container';
-  container.innerHTML = '<div style="padding: 12px; text-align: center; opacity: 0.8;">Checking for your special price...</div>';
+  container.innerHTML = '<div style="padding:12px;text-align:center;opacity:0.8">Checking for your special price...</div>';
   
-  // Find where to inject (look for price elements)
-  const priceElement = document.querySelector('.product__price, .price, [data-price], .product-price, .price__container');
-  if (priceElement) {
-    priceElement.parentNode.insertBefore(container, priceElement.nextSibling);
-    console.log('✅ Container injected successfully');
+  let injectionPoint = document.querySelector('.product__price, .price, [data-price], .product-price, .price__container');
+  
+  if (!injectionPoint) {
+    injectionPoint = document.querySelector('button[name="add"], .product-form__submit, [type="submit"]');
+  }
+  
+  if (!injectionPoint) {
+    injectionPoint = document.querySelector('form[action*="/cart/add"]');
+  }
+  
+  if (injectionPoint) {
+    if (injectionPoint.tagName === 'FORM') {
+      injectionPoint.insertBefore(container, injectionPoint.firstChild);
+    } else {
+      injectionPoint.parentNode.insertBefore(container, injectionPoint.nextSibling);
+    }
+    console.log('✅ Container injected');
   } else {
-    console.error('❌ Could not find price element to inject container');
-    return;
+    document.body.insertBefore(container, document.body.firstChild);
+    container.style.position = 'sticky';
+    container.style.top = '10px';
+    console.log('⚠️ Injected at top');
   }
 
   async function checkCustomPrice(variantId) {
     if (!variantId) {
-      console.warn('⚠️ No variant ID provided');
+      console.warn('⚠️ No variant ID');
       return;
     }
 
@@ -135,22 +91,21 @@
         })
       });
 
-      console.log('📡 API Response status:', response.status);
+      console.log('📡 API status:', response.status);
 
       if (!response.ok) {
-        console.warn('⚠️ API request failed');
         hideCustomPrice();
         return;
       }
 
       const data = await response.json();
-      console.log('📦 API Response:', data);
+      console.log('📦 Response:', data);
 
       if (data.has_custom_price) {
-        console.log('🎉 Custom price found! Displaying...');
+        console.log('🎉 Custom price found!');
         displayCustomPrice(data);
       } else {
-        console.log('ℹ️ No custom price for this product');
+        console.log('ℹ️ No custom price');
         hideCustomPrice();
       }
     } catch (error) {
@@ -161,55 +116,56 @@
 
   function displayCustomPrice(data) {
     const discount = Math.round(((data.original_price - data.custom_price) / data.original_price) * 100);
-    const currencySymbol = CONFIG.currency === 'USD' ? '$' : CONFIG.currency;
+    const currencySymbol = getCurrencySymbol(CONFIG.currency);
     
-    container.innerHTML = `
-      <div class="custom-price-header">🎉 Your Exclusive Price</div>
-      <div class="custom-price-main">
-        <span class="custom-price-value">${formatMoney(data.custom_price, currencySymbol)}</span>
-        <span class="custom-price-original">${formatMoney(data.original_price, currencySymbol)}</span>
-        <span class="custom-price-badge">${discount}% OFF</span>
-      </div>
-    `;
+    container.innerHTML = '<div class="custom-price-header">🎉 Your Exclusive Price</div><div class="custom-price-main"><span class="custom-price-value">' + currencySymbol + parseFloat(data.custom_price).toFixed(2) + '</span><span class="custom-price-original">' + currencySymbol + parseFloat(data.original_price).toFixed(2) + '</span><span class="custom-price-badge">' + discount + '% OFF</span></div>';
     
     container.classList.add('active');
-    console.log('✅ Custom price displayed');
+    container.style.display = 'block';
+    container.style.visibility = 'visible';
+    container.style.opacity = '1';
+    
+    console.log('✅ Price displayed');
+  }
+
+  function getCurrencySymbol(currency) {
+    const symbols = {
+      'USD': '$',
+      'EUR': '€',
+      'GBP': '£',
+      'INR': '₹',
+      'CAD': '$',
+      'AUD': '$'
+    };
+    return symbols[currency] || currency + ' ';
   }
 
   function hideCustomPrice() {
-    container.classList.remove('active');
+    container.style.display = 'none';
   }
 
-  function formatMoney(cents, symbol) {
-    const amount = (cents / 100).toFixed(2);
-    return symbol + amount;
-  }
-
-  // Watch for variant changes
   variantInput.addEventListener('change', function() {
-    currentVariantId = this.value || this.options?.[this.selectedIndex]?.value;
-    console.log('🔄 Variant changed to:', currentVariantId);
+    currentVariantId = this.value || (this.options && this.options[this.selectedIndex] ? this.options[this.selectedIndex].value : null);
+    console.log('🔄 Variant changed:', currentVariantId);
     checkCustomPrice(currentVariantId);
   });
 
-  // Also watch for option selectors
   const optionSelectors = document.querySelectorAll('select[data-index^="option"], input[type="radio"][name*="option"]');
-  optionSelectors.forEach(selector => {
+  optionSelectors.forEach(function(selector) {
     selector.addEventListener('change', function() {
-      setTimeout(() => {
-        const newVariantId = variantInput.value || variantInput.options?.[variantInput.selectedIndex]?.value;
+      setTimeout(function() {
+        const newVariantId = variantInput.value || (variantInput.options && variantInput.options[variantInput.selectedIndex] ? variantInput.options[variantInput.selectedIndex].value : null);
         if (newVariantId && newVariantId !== currentVariantId) {
           currentVariantId = newVariantId;
-          console.log('🔄 Variant changed to:', currentVariantId);
+          console.log('🔄 Variant changed:', currentVariantId);
           checkCustomPrice(currentVariantId);
         }
       }, 100);
     });
   });
 
-  // Initial check
   checkCustomPrice(currentVariantId);
 
-  console.log('✨ Custom Pricing initialized successfully');
+  console.log('✨ Initialized');
 
 })();
