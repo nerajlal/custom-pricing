@@ -32,20 +32,18 @@ Route::get('/', function () {
 
 // App Proxy Routes - these handle requests from Shopify proxy
 Route::prefix('app-proxy')->group(function () {
-    // Product page script
+    // Existing product page script
     Route::get('/script.js', function() {
         $jsContent = view('app-proxy.custom-price-script')->render();
-        
         return response($jsContent)
             ->header('Content-Type', 'application/javascript; charset=utf-8')
             ->header('Access-Control-Allow-Origin', '*')
             ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
     });
 
-    // Collection page script (NEW)
+    // NEW: Collection page script
     Route::get('/collection-script.js', function() {
         $jsContent = view('app-proxy.collection-price-script')->render();
-        
         return response($jsContent)
             ->header('Content-Type', 'application/javascript; charset=utf-8')
             ->header('Access-Control-Allow-Origin', '*')
@@ -53,11 +51,7 @@ Route::prefix('app-proxy')->group(function () {
     });
 
     Route::get('/ping', function() {
-        return response()->json([
-            'status' => 'ok',
-            'app' => 'custom-pricing',
-            'timestamp' => now()->toIso8601String()
-        ]);
+        return response()->json(['status' => 'ok', 'app' => 'custom-pricing']);
     });
 });
 
