@@ -160,11 +160,23 @@
   const debouncedProcessProductCards = debounce(processProductCards, 500);
 
   const observer = new MutationObserver(function(mutations) {
-    mutations.forEach(function(mutation) {
-      if (mutation.addedNodes.length > 0) {
-        debouncedProcessProductCards();
-      }
-    });
+    const meaningfulChange = mutations.some(mutation =>
+      Array.from(mutation.addedNodes).some(node => {
+        // Ignore changes caused by the script itself (i.e., adding the price badge)
+        if (node.nodeType === 1 && node.classList.contains('custom-price-badge')) {
+          return false;
+        }
+        // Also ignore text nodes that are just whitespace
+        if (node.nodeType === 3 && node.textContent.trim() === '') {
+          return false;
+        }
+        return true;
+      })
+    );
+
+    if (meaningfulChange) {
+      debouncedProcessProductCards();
+    }
   });
 
   observer.observe(document.body, {
