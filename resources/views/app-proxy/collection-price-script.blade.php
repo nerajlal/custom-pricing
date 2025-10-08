@@ -148,17 +148,28 @@
     processProductCards();
   }
 
+  function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+      const context = this;
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func.apply(context, args), wait);
+    };
+  }
+
+  const debouncedProcessProductCards = debounce(processProductCards, 500);
+
   const observer = new MutationObserver(function(mutations) {
     mutations.forEach(function(mutation) {
-      if (mutation.addedNodes.length) {
-        processProductCards();
+      if (mutation.addedNodes.length > 0) {
+        debouncedProcessProductCards();
       }
     });
   });
-
+  
   observer.observe(document.body, {
     childList: true,
-    subtree: true
+    subtree: true,
   });
 
   console.log('✨ Collection pricing initialized');
