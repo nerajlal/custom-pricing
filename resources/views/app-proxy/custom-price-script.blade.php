@@ -1,13 +1,6 @@
 (function() {
   'use strict';
   
-  // Prevent multiple executions
-  if (window.metoraProductPricingLoaded) {
-    console.log('⚠️ Product script already loaded, skipping');
-    return;
-  }
-  window.metoraProductPricingLoaded = true;
-  
   console.log('🎨 Custom Pricing Script Loaded');
 
   const customerMeta = document.querySelector('meta[name="customer-id"]');
