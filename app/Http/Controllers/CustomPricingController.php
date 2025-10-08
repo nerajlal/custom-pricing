@@ -292,4 +292,66 @@ class CustomPricingController extends Controller
 
         return response()->json(['has_custom_price' => false]);
     }
+
+
+    // Create draft order with custom pricing
+    public function createDraftOrder(Request $request)
+    {
+        $request->validate([
+            'customer_id' => 'required|integer',
+            'variant_id' => 'required|integer',
+            'quantity' => 'required|integer|min:1',
+            'shop' => 'required|string'
+        ]);
+
+        $store = Store::where('shop_domain', $request->shop)->firstOrFail();
+        
+        // Check if customer has custom pricing
+        $setting = CustomerPricingSetting::where('store_id', $store->id)
+            ->where('shopify_customer_id', $request->customer_id)
+            ->where('is_custom_pricing_enabled', true)
+            ->first();
+
+        if (!$setting) {
+            return response()->json(['has_custom_price' => false]);
+        }
+
+        $customPrice = CustomPrice::where('customer_pricing_setting_id', $setting->id)
+            ->where('shopify_variant_id', $request->variant_id)
+            ->first();
+
+        if (!$customPrice) {
+            return response()->json(['has_custom_price' => false]);
+        }
+
+        // Create draft order with custom price
+        $client = $this->getShopifyClient($store);
+        
+        $draftOrder = [
+            'draft_order' => [
+                'customer' => ['id' => $request->customer_id],
+                'line_items' => [
+                    [
+                        'variant_id' => $request->variant_id,
+                        'quantity' => $request->quantity,
+                        'price' => $customPrice->custom_price
+                    ]
+                ],
+                'note' => 'Custom pricing applied'
+            ]
+        ];
+
+        $response = $client->post('/draft_orders.json', $draftOrder);
+
+        if ($response->successful()) {
+            $draftOrderData = $response->json()['draft_order'];
+            
+            return response()->json([
+                'success' => true,
+                'invoice_url' => $draftOrderData['invoice_url']
+            ]);
+        }
+
+        return response()->json(['success' => false], 500);
+    }
 }

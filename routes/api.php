@@ -39,7 +39,7 @@ Route::prefix('admin')->middleware(['auth.shopify'])->group(function () {
 // Public API for storefront (requires API key or CORS setup)
 Route::post('/storefront/custom-price', [CustomPricingController::class, 'getCustomerPrice']);
 
-
+Route::post('/storefront/create-draft-order', [CustomPricingController::class, 'createDraftOrder']);
 
 
 
