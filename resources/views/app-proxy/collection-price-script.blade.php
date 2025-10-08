@@ -152,22 +152,11 @@
     };
   }
 
-  const debouncedProcessProductCards = debounce(processProductCards, 300);
+  // Initial run
+  processProductCards();
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', debouncedProcessProductCards);
-  } else {
-    debouncedProcessProductCards();
-  }
-
-  const observer = new MutationObserver(() => {
-    debouncedProcessProductCards();
-  });
-
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-  });
+  // Set up a poller to catch products that are loaded dynamically
+  setInterval(processProductCards, 500);
 
   console.log('✨ Collection pricing initialized');
 
