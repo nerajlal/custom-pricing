@@ -25,10 +25,6 @@
     currency: window.Shopify.currency.active
   };
 
-  const styles = document.createElement('style');
-  styles.textContent = '.custom-price-badge{display:inline-block;background:linear-gradient(135deg,#10b981,#059669)!important;color:white!important;padding:4px 10px!important;border-radius:6px!important;font-size:12px!important;font-weight:700!important;margin-top:4px!important;box-shadow:0 2px 4px rgba(16,185,129,0.3)!important}.custom-price-badge .price-new{font-size:16px!important;font-weight:bold!important;margin-right:6px!important}.custom-price-badge .price-old{text-decoration:line-through!important;opacity:0.8!important;font-size:13px!important;margin-right:6px!important}.custom-price-badge .discount{background:rgba(255,255,255,0.25)!important;padding:2px 6px!important;border-radius:4px!important;font-size:11px!important}';
-  document.head.appendChild(styles);
-
   function getCurrencySymbol(currency) {
     const symbols = {
       'USD': '$',
@@ -72,23 +68,20 @@
   }
 
   function displayCustomPriceOnCard(productCard, data) {
-    const discount = Math.round(((data.original_price - data.custom_price) / data.original_price) * 100);
     const currencySymbol = getCurrencySymbol(CONFIG.currency);
-    
     const priceElement = productCard.querySelector('.price, .product-price, [data-price], .card__information .price');
-    if (!priceElement) return;
 
-    const existingBadge = productCard.querySelector('.custom-price-badge');
-    if (existingBadge) {
-      existingBadge.remove();
+    if (!priceElement) {
+      console.log('⚠️ Price element not found on card.');
+      return;
     }
 
-    const badge = document.createElement('div');
-    badge.className = 'custom-price-badge';
-    badge.innerHTML = '<span class="price-new">🎉 ' + currencySymbol + parseFloat(data.custom_price).toFixed(2) + '</span><span class="price-old">' + currencySymbol + parseFloat(data.original_price).toFixed(2) + '</span><span class="discount">' + discount + '% OFF</span>';
-    
-    priceElement.parentNode.insertBefore(badge, priceElement);
-    priceElement.style.display = 'none';
+    // Directly update the price element's content to be more resilient
+    priceElement.style.display = 'block'; // Ensure the price element is visible
+    priceElement.innerHTML = `
+      <span style="font-weight: bold; color: #059669;">${currencySymbol}${parseFloat(data.custom_price).toFixed(2)}</span>
+      <s style="opacity: 0.7; margin-left: 6px;">${currencySymbol}${parseFloat(data.original_price).toFixed(2)}</s>
+    `;
     
     console.log('✅ Custom price displayed on card for variant:', data);
   }
