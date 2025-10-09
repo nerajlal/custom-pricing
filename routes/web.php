@@ -49,6 +49,16 @@ Route::prefix('app-proxy')->group(function () {
             ->header('Access-Control-Allow-Origin', '*')
             ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
     });
+    
+    // Cart page script
+    Route::get('/cart-script.js', function() {
+        $jsContent = view('app-proxy.cart-custom-price-script')->render();
+        
+        return response($jsContent)
+            ->header('Content-Type', 'application/javascript; charset=utf-8')
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
+    });
 
     Route::get('/ping', function() {
         return response()->json(['status' => 'ok', 'app' => 'custom-pricing']);
