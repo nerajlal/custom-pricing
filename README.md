@@ -1,66 +1,99 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Custom Pricing & Loyalty App
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## Executive Summary
 
-## About Laravel
+This application is a comprehensive solution designed to empower Shopify merchants with advanced customer retention and B2B capabilities. It seamlessly integrates two powerful growth engines into a single platform: **Personalized Wholesale Pricing** and a **Rewards-based Loyalty Program**.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Designed for flexibility, this app allows store owners to treat their VIP and Wholesale customers differently from standard retail visitors, fostering deeper relationships and increasing lifetime value without needing separate storefronts or complex workarounds.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### Key Capabilities
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+*   **B2B & Wholesale Pricing Engine**
+    Enable specific pricing for your most valuable customers. You can create "Tiers" (like Gold, Wholesale, or VIP) and assign customers to them. When these customers log in, they instantly see their special prices across the entire store—automatically replacing the standard retail price.
 
-## Learning Laravel
+*   **Integrated Loyalty Rewards**
+    Turn every purchase into an opportunity for future sales. Customers earn points for every dollar spent and can redeem them for automatic discounts. The system handles everything from tracking point balances to generating unique coupon codes for redemption.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+*   **Seamless Customer Experience**
+    The app works silently in the background. There are no pop-ups or intrusive widgets unless you want them. Prices update instantly, and loyalty points are tracked automatically, ensuring a smooth shopping experience that feels native to your brand.
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+---
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+> **Note for Developers & Technical Teams**
+> The section below details the architecture, installation, and API structure required to maintain or extend this application.
 
-## Laravel Sponsors
+---
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## Technical Documentation
 
-### Premium Partners
+### System Architecture
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+This is a **Custom Shopify App** built on a monolithic **Laravel** framework (PHP). It differs from standard "App Bridge" apps by managing its own authentication and frontend injection logic, providing greater control over performance and security.
 
-## Contributing
+*   **Backend Core**: Laravel 10 handling data persistence, business logic, and Shopify API communication.
+*   **Storefront Integration**: Uses **ScriptTag injection**. A lightweight, compiled JavaScript file is served to the storefront, which negotiates with the backend API to personalize the page for the logged-in user.
+*   **Admin Interface**: Built with Blade Templates and Tailwind CSS for a fast, responsive backend experience without the complexity of a separate React frontend.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### Installation & Deployment
 
-## Code of Conduct
+1.  **Clone Repository**
+    Clone the codebase to your server or local environment.
+    
+    `git clone <repository-url>`
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+2.  **Dependencies**
+    Install PHP and Node.js dependencies.
+    
+    `composer install`
+    
+    `npm install && npm run build`
 
-## Security Vulnerabilities
+3.  **Environment Setup**
+    Configure your `.env` file with MySQL credentials and Shopify App keys (`Client ID`, `Client Secret`, `Scopes`).
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+4.  **Database Migration**
+    Initialize the system tables.
+    
+    `php artisan migrate`
 
-## License
+### internal API Reference
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+The application exposes several endpoints for the frontend script and admin actions.
+
+### Frontend Architecture
+
+The application uses a hybrid approach to ensure custom prices and loyalty components appear seamlessly on the storefront.
+
+*   **Dynamic Script Injection**: The main entry point is a script loaded via the Shopify App Proxy (`/apps/custompicker/...`) or ScriptTag. This allows the script to be dynamically generated with server-side context (like the customer's ID and settings) using Blade templates.
+*   **Price Flashing Prevention**: To prevent the "flash of original price" before custom prices load:
+    *   **Global Hiding**: A global style (`metora-initial-hide`) is injected immediately to hide price elements on product and collection pages.
+    *   **Cart-Specific Hiding**: A targeted style (`metora-cart-hide`) is used on the cart page to ensure original prices are hidden until the custom pricing calculation is complete.
+*   **Mutation Observers**: The script uses `MutationObserver` to detect dynamic cart updates (e.g., side drawers, quantity changes) and re-apply custom pricing without requiring a page reload.
+
+#### Storefront API (Public)
+
+*   **GET /api/storefront/custom-price**
+    Checks if the currently logged-in customer has a special price for the specific product variant being viewed. Returns the custom price and original price if a rule exists.
+
+*   **POST /api/storefront/draft-order**
+    Securely creates a Draft Order in Shopify. This is critical for B2B checkout flows to ensure the custom price is honored and cannot be tampered with by the user in the browser.
+
+*   **GET /api/storefront/loyalty/search**
+    Retrieves the point balance and active tier for a customer.
+
+*   **POST /api/storefront/loyalty/redeem**
+    Redeems a set number of points and responds with a valid, unique Shopify Discount Code.
+
+#### Admin API (Authenticated)
+
+All Admin routes are protected by custom middleware that verifies the request signature from Shopify.
+
+*   **Customer Management**: Endpoints to search Shopify customers and assign them to Pricing Tiers.
+*   **Price Overrides**: Endpoints to create, update, or delete specific price rules for a Variant + Customer combination.
+*   **Loyalty Configuration**: Endpoints to adjust point values, setting earning rates (e.g., 10 points per $1), and managing manual point adjustments.
+
+### Security Implementation
+
+*   **Authentication**: Implements a custom OAuth2 flow to exchange authorization codes for permanent access tokens. Tokens are encrypted at rest.
+*   **Request Validation**: All incoming Webhooks and Admin requests are verified using HMAC signatures to ensure they originate from Shopify.
+*   **Frontend Security**: The storefront script treats all client-side data as untrusted. Final price calculations for checkout are always performed server-side via the Draft Order API to prevent manipulation.
