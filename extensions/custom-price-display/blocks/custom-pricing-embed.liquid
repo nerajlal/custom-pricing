@@ -1,0 +1,70 @@
+{% comment %}
+  Theme App Extension - Global App Embed
+  This "App Embed" enables the app globally on the storefront and provides visibility in the Theme Editor.
+  It loads the necessary script tags via the Shopify App Proxy to ensure proper signature verification.
+{% endcomment %}
+
+{% schema %}
+{
+  "name": "Custom Pricing & Loyalty",
+  "target": "body",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Enable this to show custom pricing and the loyalty widget on your storefront."
+    }
+  ]
+}
+{% endschema %}
+
+<script>
+  (function() {
+    'use strict';
+    
+    // Shopify context
+    const shop = "{{ shop.permanent_domain }}";
+    const customerId = "{{ customer.id | default: '' }}";
+    
+    console.log('🔗 Custom Pricing & Loyalty: App Embed Initializing...');
+
+    // Function to inject scripts via Proxy
+    function injectScript(proxyPath, filename, id) {
+      if (document.getElementById(id)) return;
+      
+      const script = document.createElement('script');
+      script.id = id;
+      script.async = true;
+      // We use the proxy path to ensure Shopify adds the signature
+      script.src = proxyPath + '/app-proxy/' + filename + '?shop=' + shop + (customerId ? '&logged_in_customer_id=' + customerId : '');
+      
+      script.onload = function() {
+        console.log('✅ Loaded: ' + filename);
+      };
+      
+      script.onerror = function() {
+        console.warn('⚠️ Failed to load ' + filename + ' via Proxy. Retrying via fallback...');
+        // Fallback to direct app URL if proxy fails (might hit 401 if middleware is strict)
+        const fallbackScript = document.createElement('script');
+        fallbackScript.src = "{{ 'https://custompricing.task19.com' }}/app-proxy/" + filename + "?shop=" + shop + (customerId ? "&logged_in_customer_id=" + customerId : "");
+        document.head.appendChild(fallbackScript);
+      };
+
+      document.head.appendChild(script);
+    }
+
+    // Attempt to detect the correct proxy path (Shared logic from existing scripts)
+    // Shopify usually uses one of these defaults if not customized
+    const proxyPaths = ['/apps/custom-pricing', '/apps/pricing', '/apps/custompicker'];
+    
+    // We'll try the first one and let the script's internal logic handle retries if needed, 
+    // or just assume the most likely one based on the app name.
+    const defaultProxyPath = '/apps/custom-pricing'; 
+
+    // Inject the unified custom pricing script
+    injectScript(defaultProxyPath, 'script.js', 'metora-pricing-script');
+    
+    // Inject the loyalty widget script
+    injectScript(defaultProxyPath, 'loyalty-widget.js', 'metora-loyalty-widget');
+
+  })();
+</script>

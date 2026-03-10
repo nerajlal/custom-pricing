@@ -52,9 +52,14 @@ class VerifyAppProxy
             Log::error('App Proxy signature verification failed', [
                 'received' => $hmac,
                 'calculated' => $calculatedHmac,
-                'query' => $query
+                'query' => $query,
+                'queryString_constructed' => $queryString,
+                'secret_used_mask' => substr(config('shopify.api_secret'), 0, 4) . '***'
             ]);
-            return response()->json(['error' => 'Invalid signature'], 401);
+            return response()->json([
+                'error' => 'Invalid signature',
+                'debug' => env('APP_DEBUG') ? ['calculated' => $calculatedHmac, 'constructed_string' => $queryString] : null
+            ], 401);
         }
 
         return $next($request);
