@@ -36,11 +36,17 @@ class ShopifyGraphqlService
         ]);
 
         if (!$response->successful()) {
-            Log::error("GraphQL HTTP Error", [
+            $errorMessage = "GraphQL HTTP Error: " . $response->status();
+            if ($response->status() === 401) {
+                $errorMessage .= " (Invalid Access Token - Re-authentication required)";
+            }
+            
+            Log::error($errorMessage, [
                 'status' => $response->status(),
-                'body' => $response->body()
+                'body' => $response->body(),
+                'shop' => $shop
             ]);
-            throw new \Exception("GraphQL HTTP Error: " . $response->status());
+            throw new \Exception($errorMessage);
         }
 
         $body = $response->json();
