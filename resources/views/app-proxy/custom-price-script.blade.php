@@ -1,6 +1,12 @@
 (async function() {
   'use strict';
   
+  if (window.metoraPricingInitialized) {
+      console.log('🚫 Metora Pricing Script already initialized, skipping...');
+      return;
+  }
+  window.metoraPricingInitialized = true;
+
   console.log('🎨 Unified Custom Pricing Script Loaded');
 
   // Helper to fetch identity from Proxy
@@ -473,7 +479,26 @@
       console.log('✅ Price displayed in', containers.length, 'containers');
       containers.forEach((c, idx) => {
           const style = window.getComputedStyle(c);
-          console.log(`  Container ${idx}: visible=${c.offsetParent !== null}, height=${c.offsetHeight}, zIndex=${style.zIndex}, display=${style.display}`);
+          const isVisible = c.offsetParent !== null;
+          console.log(`  Container ${idx}: visible=${isVisible}, height=${c.offsetHeight}, zIndex=${style.zIndex}, display=${style.display}`);
+          
+          if (!isVisible && style.display !== 'none') {
+             console.log(`  🔍 Checking why Container ${idx} is hidden...`);
+             let p = c.parentElement;
+             while (p && p !== document.body) {
+                 const ps = window.getComputedStyle(p);
+                 if (ps.display === 'none' || ps.visibility === 'hidden' || ps.opacity === '0') {
+                     console.log(`    ❌ Parent ${p.tagName}.${p.className || ''} is hiding us! (display: ${ps.display}, visibility: ${ps.visibility}, opacity: ${ps.opacity})`);
+                     if (p.classList.contains('metora-temporarily-hidden')) {
+                         console.log('      🛠️ Forcing parent visibility (Metora class detected)...');
+                         p.style.setProperty('display', 'block', 'important');
+                         p.style.setProperty('visibility', 'visible', 'important');
+                         p.style.setProperty('opacity', '1', 'important');
+                     }
+                 }
+                 p = p.parentElement;
+             }
+          }
       });
     }
 
