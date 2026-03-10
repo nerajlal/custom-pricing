@@ -21,22 +21,18 @@ class ScriptTagManager
                 [
                     'src' => "{$appUrl}/app-proxy/script.js",
                     'displayScope' => 'ONLINE_STORE',
-                    'event' => 'ON_LOAD'
                 ],
                 [
                     'src' => "{$appUrl}/app-proxy/collection-script.js",
                     'displayScope' => 'ONLINE_STORE',
-                    'event' => 'ON_LOAD'
                 ],
                 [
                     'src' => "{$appUrl}/app-proxy/cart-script.js",
                     'displayScope' => 'ONLINE_STORE',
-                    'event' => 'ON_LOAD'
                 ],
                 [
                     'src' => "{$appUrl}/app-proxy/loyalty-cart.js",
                     'displayScope' => 'ONLINE_STORE',
-                    'event' => 'ON_LOAD'
                 ]
             ];
             

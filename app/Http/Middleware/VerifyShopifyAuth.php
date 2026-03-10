@@ -26,6 +26,8 @@ class VerifyShopifyAuth
             if (!$this->verifyHmac($request->all())) {
                 return response()->json(['error' => 'HMAC verification failed'], 401);
             }
+            // Valid HMAC, set session to avoid immediate redirect loops
+            session(['shopify_shop_domain' => $shop]);
         } 
         // 3. Security: Otherwise verify session/token (for embedded app requests)
         // Note: For a pure custom implementation, we expect a session token or valid session
