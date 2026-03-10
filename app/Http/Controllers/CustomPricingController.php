@@ -9,6 +9,7 @@ use App\Models\PricingTier;
 use App\Services\ShopifyGraphqlService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 use Exception;
 
 class CustomPricingController extends Controller
