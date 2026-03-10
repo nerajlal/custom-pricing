@@ -6,9 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class Store extends Model
 {
+    protected $table = 'stores';
+    
     protected $fillable = [
         'shop_domain',
-        'access_token'
+        'access_token',
+        'scopes'
     ];
 
     protected $hidden = [

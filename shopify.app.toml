@@ -1,0 +1,28 @@
+# Learn more about configuring your Shopify app at shopify.dev/docs/apps/tools/cli/configuration
+
+name = "custom-price-neraj"
+client_id = "c38580159e72cd6ca518fdbba4c9e7b5"
+application_url = "https://custompricing.task19.com"
+embedded = false
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_customers,write_draft_orders,read_draft_orders,read_orders,read_products,write_discounts,write_price_rules,read_script_tags,write_script_tags"
+
+[auth]
+redirect_urls = [
+  "https://custompricing.task19.com/auth/callback"
+]
+
+[webhooks]
+api_version = "2025-10"
+
+[[webhooks.subscriptions]]
+compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
+uri = "https://custompricing.task19.com/webhooks"
+
+[pos]
+embedded = false
+
+[build]
+automatically_update_urls_on_dev = true

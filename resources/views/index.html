@@ -5,57 +5,145 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Custom Pricing App</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+        .card-shadow {
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+        .btn-primary {
+            background: linear-gradient(180deg, #5c6ac4 0%, #4959bd 100%);
+            transition: all 0.2s ease;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(180deg, #4959bd 0%, #3f4eae 100%);
+            transform: translateY(-1px);
+        }
+        .btn-danger {
+            background: linear-gradient(180deg, #de3618 0%, #c92f13 100%);
+        }
+        .btn-danger:hover {
+            background: linear-gradient(180deg, #c92f13 0%, #b32b11 100%);
+        }
+        .input-field {
+            border: 1px solid #dfe3e8;
+            transition: all 0.2s ease;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #5c6ac4;
+            box-shadow: 0 0 0 3px rgba(92, 106, 196, 0.15);
+        }
+        .toggle-switch:checked {
+            background-color: #5c6ac4;
+            border-color: #5c6ac4;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .badge-success {
+            background: #d1f7c4;
+            color: #108043;
+        }
+        .badge-info {
+            background: #b4e1fa;
+            color: #084e8a;
+        }
+        .product-card {
+            transition: all 0.2s ease;
+        }
+        .product-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+    </style>
 </head>
-<body class="bg-gray-50">
-    <div class="min-h-screen p-6">
-        <div class="max-w-6xl mx-auto">
-            <!-- Header -->
-            <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
-                <h1 class="text-3xl font-bold text-gray-900">Custom Pricing Manager</h1>
-                <p class="text-gray-600 mt-2">Set custom prices for specific customers</p>
-            </div>
-
-            <!-- Customer Search Section -->
-            <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
-                <h2 class="text-xl font-semibold text-gray-900 mb-4">Search Customer</h2>
-                
-                <div class="flex gap-3">
-                    <input 
-                        type="email" 
-                        id="customerEmail" 
-                        placeholder="Enter customer email..."
-                        class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                    <button 
-                        onclick="searchCustomer()"
-                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-                    >
-                        Search
-                    </button>
+<body class="bg-[#f4f6f8]">
+    <div class="min-h-screen">
+        <!-- App Header -->
+        <div class="bg-white border-b border-gray-200 sticky top-0 z-10">
+            <div class="max-w-7xl mx-auto px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-[#5c6ac4] to-[#4959bd] rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h1 class="text-xl font-semibold text-gray-900">Custom Pricing</h1>
+                            <p class="text-sm text-gray-600">Manage personalized pricing for customers</p>
+                        </div>
+                    </div>
                 </div>
+            </div>
+        </div>
 
-                <!-- Customer Result -->
-                <div id="customerResult" class="hidden mt-6">
-                    <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                        <div class="flex items-start justify-between">
-                            <div>
-                                <h3 class="font-semibold text-lg" id="customerName"></h3>
-                                <p class="text-gray-600" id="customerEmailDisplay"></p>
-                                <p class="text-sm text-gray-500 mt-1" id="customerId"></p>
-                            </div>
-                            
-                            <!-- Toggle Switch -->
-                            <div class="flex items-center gap-3">
-                                <span class="text-sm font-medium text-gray-700">Enable Custom Pricing</span>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input 
-                                        type="checkbox" 
-                                        id="customPricingToggle"
-                                        onchange="toggleCustomPricing()"
-                                        class="sr-only peer"
-                                    >
-                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                </label>
+        <div class="max-w-7xl mx-auto px-6 py-8">
+            <!-- Customer Search Card -->
+            <div class="bg-white rounded-lg card-shadow mb-6">
+                <div class="px-6 py-5 border-b border-gray-200">
+                    <h2 class="text-base font-semibold text-gray-900">Find Customer</h2>
+                    <p class="text-sm text-gray-600 mt-1">Search by email to manage custom pricing</p>
+                </div>
+                
+                <div class="p-6">
+                    <div class="flex gap-3">
+                        <div class="flex-1">
+                            <input 
+                                type="email" 
+                                id="customerEmail" 
+                                placeholder="customer@example.com"
+                                class="w-full px-4 py-2.5 input-field rounded-lg text-sm"
+                            >
+                        </div>
+                        <button 
+                            onclick="searchCustomer()"
+                            class="px-6 py-2.5 btn-primary text-white rounded-lg font-medium text-sm shadow-sm"
+                        >
+                            Search Customer
+                        </button>
+                    </div>
+
+                    <!-- Customer Result -->
+                    <div id="customerResult" class="hidden mt-6">
+                        <div class="border-2 border-[#5c6ac4]/20 rounded-lg p-5 bg-gradient-to-br from-[#5c6ac4]/5 to-transparent">
+                            <div class="flex items-center justify-between flex-wrap gap-4">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-14 h-14 rounded-full bg-gradient-to-br from-[#5c6ac4] to-[#4959bd] flex items-center justify-center text-white font-bold text-lg shadow-md">
+                                        <span id="customerInitials"></span>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-lg text-gray-900" id="customerName"></h3>
+                                        <p class="text-sm text-gray-600" id="customerEmailDisplay"></p>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <span class="badge badge-info" id="customerId"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Toggle Switch -->
+                                <div class="flex items-center gap-3 bg-white px-4 py-3 rounded-lg shadow-sm border border-gray-200">
+                                    <div class="text-right">
+                                        <span class="text-sm font-semibold text-gray-900 block">Custom Pricing</span>
+                                        <span class="text-xs text-gray-500" id="toggleStatus">Disabled</span>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input 
+                                            type="checkbox" 
+                                            id="customPricingToggle"
+                                            onchange="toggleCustomPricing()"
+                                            class="sr-only peer toggle-switch"
+                                        >
+                                        <div class="w-12 h-6 bg-gray-300 rounded-full peer peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#5c6ac4]/20 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-md peer-checked:bg-[#5c6ac4]"></div>
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -63,80 +151,123 @@
             </div>
 
             <!-- Product Search & Pricing Section -->
-            <div id="pricingSection" class="hidden">
-                <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
-                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Set Custom Prices</h2>
-                    
-                    <div class="flex gap-3 mb-4">
-                        <input 
-                            type="text" 
-                            id="productSearch" 
-                            placeholder="Search products..."
-                            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                        <button 
-                            onclick="searchProducts()"
-                            class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
-                        >
-                            Search Products
-                        </button>
+            <div id="pricingSection" class="hidden space-y-6">
+                <div class="bg-white rounded-lg card-shadow">
+                    <div class="px-6 py-5 border-b border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="text-base font-semibold text-gray-900">Add Custom Price</h2>
+                                <p class="text-sm text-gray-600 mt-1">Search products to set custom pricing</p>
+                            </div>
+                        </div>
                     </div>
+                    
+                    <div class="p-6">
+                        <div class="flex gap-3">
+                            <div class="flex-1 relative">
+                                <svg class="absolute left-3 top-3 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                                <input 
+                                    type="text" 
+                                    id="productSearch" 
+                                    placeholder="Search by product name..."
+                                    class="w-full pl-10 pr-4 py-2.5 input-field rounded-lg text-sm"
+                                >
+                            </div>
+                            <button 
+                                onclick="searchProducts()"
+                                class="px-6 py-2.5 btn-primary text-white rounded-lg font-medium text-sm shadow-sm"
+                            >
+                                Search Products
+                            </button>
+                        </div>
 
-                    <!-- Product Results -->
-                    <div id="productResults" class="grid grid-cols-1 gap-4"></div>
+                        <!-- Product Results -->
+                        <div id="productResults" class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                    </div>
                 </div>
 
                 <!-- Existing Custom Prices -->
-                <div class="bg-white rounded-lg shadow-sm p-6">
-                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Current Custom Prices</h2>
-                    <div id="existingPrices" class="space-y-3"></div>
+                <div class="bg-white rounded-lg card-shadow">
+                    <div class="px-6 py-5 border-b border-gray-200 flex items-center justify-between">
+                        <div>
+                            <h2 class="text-base font-semibold text-gray-900">Active Custom Prices</h2>
+                            <p class="text-sm text-gray-600 mt-1">Current personalized pricing for this customer</p>
+                        </div>
+                        <span id="priceCount" class="badge badge-info font-semibold"></span>
+                    </div>
+                    <div class="p-6">
+                        <div id="existingPrices" class="space-y-3"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Custom Price Modal -->
-    <div id="priceModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 class="text-xl font-semibold mb-4">Set Custom Price</h3>
+    <div id="priceModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl max-w-lg w-full card-shadow">
+            <div class="px-6 py-5 border-b border-gray-200 bg-gradient-to-r from-[#5c6ac4]/5 to-transparent">
+                <h3 class="text-lg font-semibold text-gray-900">Set Custom Price</h3>
+                <p class="text-sm text-gray-600 mt-1">Define a personalized price for this product</p>
+            </div>
             
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Product</label>
-                    <p id="modalProductName" class="text-gray-900 font-medium"></p>
-                    <p id="modalVariantName" class="text-sm text-gray-600"></p>
+            <div class="p-6 space-y-5">
+                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Product Details</label>
+                    <p id="modalProductName" class="text-gray-900 font-semibold text-base"></p>
+                    <p id="modalVariantName" class="text-sm text-gray-600 mt-1"></p>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Original Price</label>
-                    <p id="modalOriginalPrice" class="text-gray-900 font-semibold text-lg"></p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Original Price</label>
+                        <p id="modalOriginalPrice" class="text-gray-900 font-bold text-2xl"></p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Custom Price *</label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-3.5 text-gray-500 font-semibold text-lg">$</span>
+                            <input 
+                                type="number" 
+                                id="customPriceInput"
+                                step="0.01"
+                                min="0"
+                                class="w-full pl-9 pr-4 py-3 input-field rounded-lg text-lg font-semibold"
+                                placeholder="0.00"
+                            >
+                        </div>
+                    </div>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Custom Price</label>
-                    <input 
-                        type="number" 
-                        id="customPriceInput"
-                        step="0.01"
-                        min="0"
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="0.00"
-                    >
+                <div id="savingsPreview" class="hidden bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                            <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-900">Customer Saves</p>
+                            <p class="text-lg font-bold text-green-700" id="savingsAmount"></p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="flex gap-3 mt-6">
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex gap-3 rounded-b-xl">
                 <button 
                     onclick="closeModal()"
-                    class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+                    class="flex-1 px-5 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium text-sm hover:bg-gray-50 transition-all"
                 >
                     Cancel
                 </button>
                 <button 
                     onclick="saveCustomPrice()"
-                    class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                    class="flex-1 px-5 py-2.5 btn-primary text-white rounded-lg font-medium text-sm shadow-sm"
                 >
-                    Save Price
+                    Save Custom Price
                 </button>
             </div>
         </div>
@@ -144,11 +275,27 @@
 
     <script>
         // Global variables
-        const API_URL = 'https://customprice.metora.in/api';
+        const API_URL = 'https://custompricing.task19.com/api';
         const SHOP_DOMAIN = 'https://my-custom-pricing-store.myshopify.com/';
         let currentCustomer = null;
         let currentPricingSetting = null;
         let selectedProduct = null;
+
+        // Calculate savings preview
+        document.getElementById('customPriceInput').addEventListener('input', function() {
+            const originalPrice = parseFloat(selectedProduct.price);
+            const customPrice = parseFloat(this.value);
+            const preview = document.getElementById('savingsPreview');
+            
+            if (customPrice > 0 && customPrice < originalPrice) {
+                const savings = originalPrice - customPrice;
+                const percentage = ((savings / originalPrice) * 100).toFixed(0);
+                document.getElementById('savingsAmount').textContent = `$${savings.toFixed(2)} (${percentage}% discount)`;
+                preview.classList.remove('hidden');
+            } else {
+                preview.classList.add('hidden');
+            }
+        });
 
         async function searchCustomer() {
             const email = document.getElementById('customerEmail').value.trim();
@@ -163,7 +310,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': 'Bearer ' + sessionStorage.getItem('token'),
-                        'ngrok-skip-browser-warning': 'true'  // Add this line
+                        'ngrok-skip-browser-warning': 'true'
                     },
                     body: JSON.stringify({ email, shop: SHOP_DOMAIN })
                 });
@@ -185,10 +332,16 @@
         }
 
         function displayCustomer(customer, setting) {
-            document.getElementById('customerName').textContent = `${customer.first_name} ${customer.last_name}`;
+            const firstName = customer.first_name || '';
+            const lastName = customer.last_name || '';
+            const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || 'C';
+            
+            document.getElementById('customerInitials').textContent = initials;
+            document.getElementById('customerName').textContent = `${firstName} ${lastName}`.trim() || 'Customer';
             document.getElementById('customerEmailDisplay').textContent = customer.email;
-            document.getElementById('customerId').textContent = `Customer ID: ${customer.id}`;
+            document.getElementById('customerId').textContent = `ID: ${customer.id}`;
             document.getElementById('customPricingToggle').checked = setting.is_custom_pricing_enabled;
+            document.getElementById('toggleStatus').textContent = setting.is_custom_pricing_enabled ? 'Enabled' : 'Disabled';
             
             document.getElementById('customerResult').classList.remove('hidden');
             document.getElementById('pricingSection').classList.remove('hidden');
@@ -196,6 +349,7 @@
 
         async function toggleCustomPricing() {
             const enabled = document.getElementById('customPricingToggle').checked;
+            document.getElementById('toggleStatus').textContent = enabled ? 'Enabled' : 'Disabled';
             
             try {
                 const response = await fetch(`${API_URL}/admin/customers/toggle-pricing`, {
@@ -214,15 +368,16 @@
                 
                 if (response.ok) {
                     currentPricingSetting = data.setting;
-                    alert(`Custom pricing ${enabled ? 'enabled' : 'disabled'} successfully`);
                 } else {
                     alert('Failed to update pricing settings');
                     document.getElementById('customPricingToggle').checked = !enabled;
+                    document.getElementById('toggleStatus').textContent = !enabled ? 'Enabled' : 'Disabled';
                 }
             } catch (error) {
                 console.error('Error:', error);
                 alert('Failed to toggle custom pricing');
                 document.getElementById('customPricingToggle').checked = !enabled;
+                document.getElementById('toggleStatus').textContent = !enabled ? 'Enabled' : 'Disabled';
             }
         }
 
@@ -255,16 +410,24 @@
             const container = document.getElementById('productResults');
             container.innerHTML = '';
 
+            if (products.length === 0) {
+                container.innerHTML = '<div class="col-span-2 text-center py-12"><svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg><p class="text-gray-600 font-medium">No products found</p><p class="text-sm text-gray-500 mt-1">Try a different search term</p></div>';
+                return;
+            }
+
             products.forEach(product => {
                 product.variants.forEach(variant => {
                     const div = document.createElement('div');
-                    div.className = 'border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition';
+                    div.className = 'product-card border border-gray-200 rounded-lg p-5 bg-white card-shadow';
                     div.innerHTML = `
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h4 class="font-semibold text-gray-900">${product.title}</h4>
-                                <p class="text-sm text-gray-600">${variant.title}</p>
-                                <p class="text-lg font-bold text-gray-900 mt-2">$${variant.price}</p>
+                        <div class="flex justify-between items-start gap-4">
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-gray-900 text-base mb-1">${product.title}</h4>
+                                <p class="text-sm text-gray-600 mb-3">${variant.title}</p>
+                                <div class="inline-flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
+                                    <span class="text-xs text-gray-600 font-medium">Price:</span>
+                                    <span class="text-lg font-bold text-gray-900">$${variant.price}</span>
+                                </div>
                             </div>
                             <button 
                                 onclick='openPriceModal(${JSON.stringify({
@@ -274,7 +437,7 @@
                                     variant_title: variant.title,
                                     price: variant.price
                                 })})' 
-                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                                class="px-4 py-2.5 btn-primary text-white rounded-lg text-sm font-medium whitespace-nowrap shadow-sm"
                             >
                                 Set Price
                             </button>
@@ -291,6 +454,7 @@
             document.getElementById('modalVariantName').textContent = product.variant_title;
             document.getElementById('modalOriginalPrice').textContent = `$${product.price}`;
             document.getElementById('customPriceInput').value = '';
+            document.getElementById('savingsPreview').classList.add('hidden');
             document.getElementById('priceModal').classList.remove('hidden');
         }
 
@@ -328,7 +492,6 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    alert('Custom price saved successfully!');
                     closeModal();
                     loadExistingPrices();
                 } else {
@@ -359,32 +522,40 @@
 
         function displayExistingPrices(prices) {
             const container = document.getElementById('existingPrices');
+            const countSpan = document.getElementById('priceCount');
             container.innerHTML = '';
+            countSpan.textContent = `${prices.length} ${prices.length === 1 ? 'Price' : 'Prices'}`;
 
             if (prices.length === 0) {
-                container.innerHTML = '<p class="text-gray-500 text-center py-4">No custom prices set yet</p>';
+                container.innerHTML = '<div class="text-center py-16 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300"><svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><p class="text-gray-600 font-semibold mb-1">No Custom Prices Set</p><p class="text-sm text-gray-500">Search for products above to create personalized pricing</p></div>';
                 return;
             }
 
             prices.forEach(price => {
                 const div = document.createElement('div');
-                div.className = 'border border-gray-200 rounded-lg p-4 bg-gray-50';
-                const discount = ((price.original_price - price.custom_price) / price.original_price * 100).toFixed(2);
+                div.className = 'border border-gray-200 rounded-lg p-5 hover:border-[#5c6ac4] transition-all bg-gradient-to-r from-white to-gray-50';
+                const discount = ((price.original_price - price.custom_price) / price.original_price * 100).toFixed(0);
                 
                 div.innerHTML = `
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h4 class="font-semibold text-gray-900">${price.product_title}</h4>
-                            <p class="text-sm text-gray-600">${price.variant_title || 'Default'}</p>
-                            <div class="flex gap-4 mt-2">
-                                <span class="text-sm text-gray-500">Original: <span class="line-through">${price.original_price}</span></span>
-                                <span class="text-sm font-semibold text-green-600">Custom: ${price.custom_price}</span>
-                                <span class="text-sm text-blue-600">${discount}% off</span>
+                    <div class="flex justify-between items-start gap-4">
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-gray-900 text-base mb-1">${price.product_title}</h4>
+                            <p class="text-sm text-gray-600 mb-3">${price.variant_title || 'Default variant'}</p>
+                            <div class="flex items-center gap-4 flex-wrap">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-gray-500 font-medium">Original:</span>
+                                    <span class="text-sm text-gray-600 line-through">$${price.original_price}</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-gray-500 font-medium">Custom:</span>
+                                    <span class="text-base font-bold text-gray-900">$${price.custom_price}</span>
+                                </div>
+                                <span class="badge badge-success font-semibold">${discount}% OFF</span>
                             </div>
                         </div>
                         <button 
                             onclick="deletePrice(${price.id})"
-                            class="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
+                            class="px-4 py-2 btn-danger text-white rounded-lg text-sm font-medium shadow-sm whitespace-nowrap"
                         >
                             Delete
                         </button>
@@ -406,7 +577,6 @@
                 });
 
                 if (response.ok) {
-                    alert('Custom price deleted successfully');
                     loadExistingPrices();
                 } else {
                     alert('Failed to delete custom price');
