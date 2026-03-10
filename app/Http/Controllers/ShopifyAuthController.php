@@ -31,12 +31,20 @@ class ShopifyAuthController extends Controller
     
     // If no shop in query, try to get from Shopify embedded context
     if (!$shop && $request->query('host')) {
-        // Decode the host parameter that Shopify sends
         $host = $request->query('host');
         $decodedHost = base64_decode($host);
+        Log::info("Decoded host: {$decodedHost}");
         
-        // Extract shop from host (format: shop-name.myshopify.com/admin)
+        // Format 1: shop-name.myshopify.com/admin
         if (preg_match('/^([a-zA-Z0-9\-]+\.myshopify\.com)/', $decodedHost, $matches)) {
+            $shop = $matches[1];
+        } 
+        // Format 2: admin.shopify.com/store/shop-name
+        elseif (preg_match('/admin\.shopify\.com\/store\/([a-zA-Z0-9\-]+)/', $decodedHost, $matches)) {
+            $shop = $matches[1] . '.myshopify.com';
+        }
+        // Fallback: If host contains a myshopify domain anywhere
+        elseif (preg_match('/([a-zA-Z0-9\-]+\.myshopify\.com)/', $decodedHost, $matches)) {
             $shop = $matches[1];
         }
     }
