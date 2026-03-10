@@ -249,6 +249,14 @@
         font-weight: inherit !important;
         color: inherit !important;
       }
+      /* Force hide theme elements even if re-rendered */
+      .metora-temporarily-hidden, .metora-hidden-original {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        opacity: 0 !important;
+      }
     `;
     document.head.appendChild(pdpStyles);
 
@@ -496,12 +504,54 @@
           const newVariantId = variantInput.value || (variantInput.options && variantInput.options[variantInput.selectedIndex] ? variantInput.options[variantInput.selectedIndex].value : null);
           if (newVariantId && newVariantId !== currentVariantId) {
             currentVariantId = newVariantId;
-            console.log('🔄 Variant changed via options:', currentVariantId);
             checkCustomPrice(currentVariantId);
           }
         }, 100);
       });
     });
+
+    // Observer for theme script price overrides (Dawn, etc.)
+    const pdpObserver = new MutationObserver((mutations) => {
+        let needsRecheck = false;
+        mutations.forEach(mutation => {
+            if (mutation.type === 'childList') {
+                mutation.removedNodes.forEach(node => {
+                    if (node.classList && node.classList.contains('metora-custom-price-container')) {
+                        needsRecheck = true;
+                    }
+                });
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === 1 && !node.classList.contains('metora-custom-price-container')) {
+                        // If theme re-adds a price element, we need to hide it
+                        if (node.matches('.price, [data-price], .product__price')) {
+                            needsRecheck = true;
+                        }
+                    }
+                });
+            }
+        });
+
+        if (needsRecheck) {
+            console.log('🔄 Theme DOM change detected, re-applying custom price...');
+            // Avoid loops by disconnecting temporarily if needed, 
+            // but checkCustomPrice has internal guards too.
+            checkCustomPrice(currentVariantId);
+        }
+    });
+
+    // Start observing the product info container or body
+    const productInfo = document.querySelector('.product__info-container, .product-single__meta, .main-product');
+    if (productInfo) {
+        pdpObserver.observe(productInfo, { childList: true, subtree: true });
+    } else {
+        pdpObserver.observe(document.body, { childList: true, subtree: true });
+    }
+
+    // Expose manual refresh for user debugging
+    window.metoraManualRefreshPrice = function() {
+        console.log('🛠️ Manual refresh triggered');
+        checkCustomPrice(currentVariantId);
+    };
 
     // Check initial variant
     checkCustomPrice(currentVariantId);
