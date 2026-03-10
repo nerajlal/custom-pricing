@@ -290,29 +290,33 @@
     let validPoints = [];
     injectionPoints.forEach(point => {
         if (point.closest('.metora-custom-price-container')) return; // Don't inject inside ourselves
-        if (point.closest('.cart-drawer')) return; // Skip cart drawer
-        if (point.closest('.cart')) return; // Skip cart page elements if any
+        // **CRITICAL FIX: Exclude Cart/Drawer elements on PDP**
+        if (point.closest('.cart-drawer')) return;
+        if (point.closest('.cart-notification')) return;
+        if (point.closest('.cart-items')) return;
+        if (point.closest('.cart__footer')) return;
+        if (point.closest('cart-drawer')) return; // tag name for Dawn
+        if (point.closest('cart-notification')) return; // tag name for Dawn
+        if (point && point.id && point.id.toLowerCase().includes('cart')) return;
+        if (point && point.className && typeof point.className === 'string' && point.className.toLowerCase().includes('cart-item')) return;
         
-        // **CRITICAL FIX: Exclude Related Products / Collection Grids**
+        // **CRITICAL FIX: Exclude Related Products / Collection Grids on PDP**
         if (point.closest('.related-products')) return;
         if (point.closest('.product-recommendations')) return;
+        if (point.closest('.upcells')) return;
         if (point.closest('.grid__item')) return; // Usually collection items
         if (point.closest('.card')) return; // Cards in grids
         if (point.closest('.product-card')) return;
         if (point.closest('.collection-list')) return;
         if (point.closest('.featured-collection')) return;
         
-        // **Ensure it belongs to the main product**
-        // A good heuristic is: Is it inside or near the Add To Cart form?
+        // **Prefer points inside the main product container**
+        const mainContainer = point.closest('.product__info-container, .product-single__meta, .main-product, #ProductSection');
         const form = point.closest('form[action*="/cart/add"]');
-        const mainSection = point.closest('.product, .product-single, #ProductSection, .main-product');
         
-        if (!form && !mainSection) {
-            // If it's just a loose .price element not in a main product structure, skip it to be safe
-            // unless it's the ONLY price on the page?
-            // Let's be strict to avoid valid "related" items being targeted.
-            // console.log('Skipping loose price element:', point);
-            // return;
+        if (!mainContainer && !form) {
+            // If it's not clearly in the main product info, it might be a header cart or something. Skip.
+            return;
         }
 
         // Avoid duplicate injection in same parent
