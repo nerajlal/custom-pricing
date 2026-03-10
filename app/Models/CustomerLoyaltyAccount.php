@@ -16,12 +16,14 @@ class CustomerLoyaltyAccount extends Model
         'points_redeemed',
         'current_tier_id',
         'birthday',
-        'birthday_bonus_claimed_this_year'
+        'birthday_bonus_claimed_this_year',
+        'is_enabled'
     ];
 
     protected $casts = [
         'birthday' => 'date',
-        'birthday_bonus_claimed_this_year' => 'boolean'
+        'birthday_bonus_claimed_this_year' => 'boolean',
+        'is_enabled' => 'boolean'
     ];
 
     public function store()

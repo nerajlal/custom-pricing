@@ -873,6 +873,19 @@
                                 </div>
                             </div>
 
+                            <div class="polaris-stack" style="justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--p-border);">
+                                <div class="polaris-stack-item-fill">
+                                    <label class="polaris-label">Enable for All Customers</label>
+                                    <p class="polaris-label-secondary">Automatically enable loyalty program for every customer in your store</p>
+                                </div>
+                                <div class="polaris-stack-item">
+                                    <label class="polaris-choice">
+                                        <input type="checkbox" id="allowAllCustomers" class="polaris-choice-input">
+                                        <span class="polaris-choice-control"></span>
+                                    </label>
+                                </div>
+                            </div>
+
                             <div class="polaris-layout gap-4 grid-md-2" style="padding-top: 16px;">
                                 <div>
                                     <label class="polaris-label">Points per Dollar</label>
@@ -1385,14 +1398,22 @@ const SHOP_DOMAIN = urlParams.get('shop') || '{{ request()->query("shop") }}';
         }
 
         function displayLoyaltyAccount(account) {
-            document.getElementById('currentBalance').textContent = account.current_points_balance;
-            document.getElementById('totalEarned').textContent = account.total_points_earned;
             document.getElementById('totalRedeemed').textContent = account.points_redeemed;
             
-            if (account.tier) {
-                document.getElementById('currentTier').textContent = account.tier.name;
-                document.getElementById('tierBenefit').textContent = `${account.tier.points_multiplier / 100}x points, ${account.tier.discount_percentage}% discount`;
-            }
+            // Add status toggle
+            const statusBadge = account.is_enabled ? 
+                '<span class="polaris-badge polaris-badge-success">Active</span>' : 
+                '<span class="polaris-badge polaris-badge-critical">Disabled</span>';
+            
+            const toggleBtn = `
+                <button onclick="toggleCustomerLoyalty(${account.id}, ${!account.is_enabled})" 
+                        class="polaris-btn ${account.is_enabled ? 'polaris-btn-destructive' : 'polaris-btn-primary'}" 
+                        style="margin-top: 10px; width: 100%;">
+                    ${account.is_enabled ? 'Disable Loyalty for this Customer' : 'Enable Loyalty for this Customer'}
+                </button>
+            `;
+
+            document.getElementById('currentTier').innerHTML = `${account.tier ? account.tier.name : 'Bronze'} ${statusBadge}${toggleBtn}`;
 
             displayTransactionHistory(account.transactions);
             document.getElementById('loyaltyAccountSection').classList.remove('hidden');
@@ -1526,12 +1547,40 @@ const SHOP_DOMAIN = urlParams.get('shop') || '{{ request()->query("shop") }}';
             }
         });
 
+        async function toggleCustomerLoyalty(accountId, enabled) {
+            if (!confirm(`Are you sure you want to ${enabled ? 'enable' : 'disable'} loyalty for this customer?`)) return;
+
+            try {
+                const response = await fetch(`${API_URL}/admin/loyalty/customers/toggle-status?shop=${SHOP_DOMAIN}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        account_id: accountId,
+                        enabled: enabled
+                    })
+                });
+
+                if (response.ok) {
+                    alert('Status updated successfully!');
+                    searchLoyaltyCustomer(); // Refresh display
+                } else {
+                    alert('Failed to update status');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to toggle loyalty status');
+            }
+        }
+
         async function loadLoyaltySettings() {
             try {
                 const response = await fetch(`${API_URL}/admin/loyalty/settings?shop=${SHOP_DOMAIN}`);
                 loyaltySettings = await response.json();
                 
                 document.getElementById('loyaltyEnabled').checked = loyaltySettings.is_enabled;
+                document.getElementById('allowAllCustomers').checked = !!loyaltySettings.allow_all_customers;
                 document.getElementById('pointsPerDollar').value = loyaltySettings.points_per_dollar;
                 document.getElementById('pointsValueCents').value = loyaltySettings.points_value_cents;
                 document.getElementById('minRedemption').value = loyaltySettings.min_points_redemption;
@@ -1544,6 +1593,7 @@ const SHOP_DOMAIN = urlParams.get('shop') || '{{ request()->query("shop") }}';
         async function saveLoyaltySettings() {
             const settings = {
         	is_enabled: document.getElementById('loyaltyEnabled').checked,
+                allow_all_customers: document.getElementById('allowAllCustomers').checked,
         	points_per_dollar: parseInt(document.getElementById('pointsPerDollar').value),
         	points_value_cents: parseInt(document.getElementById('pointsValueCents').value),
         	min_points_redemption: parseInt(document.getElementById('minRedemption').value),

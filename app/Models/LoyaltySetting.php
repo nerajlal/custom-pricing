@@ -17,13 +17,15 @@ class LoyaltySetting extends Model
         'signup_bonus_enabled',
         'signup_bonus_points',
         'birthday_bonus_enabled',
-        'birthday_bonus_points'
+        'birthday_bonus_points',
+        'allow_all_customers'
     ];
 
     protected $casts = [
         'is_enabled' => 'boolean',
         'signup_bonus_enabled' => 'boolean',
-        'birthday_bonus_enabled' => 'boolean'
+        'birthday_bonus_enabled' => 'boolean',
+        'allow_all_customers' => 'boolean'
     ];
 
     public function store()

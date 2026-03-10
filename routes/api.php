@@ -62,6 +62,7 @@ Route::prefix('admin')->middleware(['auth.shopify'])->group(function () {
     
     // Customer Loyalty Management
     Route::post('/loyalty/customers/search', [LoyaltyController::class, 'searchCustomerLoyalty']);
+    Route::post('/loyalty/customers/toggle-status', [LoyaltyController::class, 'toggleCustomerLoyalty']);
     Route::get('/loyalty/customers/{id}', [LoyaltyController::class, 'getCustomerLoyalty']);
     Route::post('/loyalty/points/adjust', [LoyaltyController::class, 'adjustPoints']);
     Route::post('/loyalty/points/redeem', [LoyaltyController::class, 'redeemPoints']);
