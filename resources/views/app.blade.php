@@ -1398,7 +1398,16 @@ const SHOP_DOMAIN = urlParams.get('shop') || '{{ request()->query("shop") }}';
         }
 
         function displayLoyaltyAccount(account) {
-            document.getElementById('totalRedeemed').textContent = account.points_redeemed;
+            document.getElementById('currentBalance').textContent = account.current_points_balance || 0;
+            document.getElementById('totalEarned').textContent = account.total_points_earned || 0;
+            document.getElementById('totalRedeemed').textContent = account.points_redeemed || 0;
+            
+            // Update tier benefit
+            if (account.tier) {
+                document.getElementById('tierBenefit').textContent = `${account.tier.points_multiplier / 100}x points, ${account.tier.discount_percentage}% discount`;
+            } else {
+                document.getElementById('tierBenefit').textContent = '1x points, 0% discount';
+            }
             
             // Add status toggle
             const statusBadge = account.is_enabled ? 
