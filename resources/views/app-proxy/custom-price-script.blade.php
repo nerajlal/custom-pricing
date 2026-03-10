@@ -184,7 +184,7 @@
         border-radius: 12px !important;
         margin: 16px 0 !important;
         box-shadow: 0 4px 6px rgba(16,185,129,0.2) !important;
-        display: none !important;
+        display: none;
         visibility: visible !important;
         opacity: 1 !important;
         position: relative !important;

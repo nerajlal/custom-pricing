@@ -125,7 +125,7 @@
     if (shouldCheck) {
         console.log('🛒 Cart Drawer interaction detected!');
         if (!window.metoraInitComplete || !window.metoraUpdateInProgress) {
-            fetchCartPrices();
+            refreshCartAndPrices();
         }
     }
   });
