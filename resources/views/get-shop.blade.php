@@ -23,21 +23,26 @@
             }
 
             if (host && apiKey) {
-                // Use Shopify App Bridge to get shop
-                var AppBridge = window['app-bridge'];
-                var createApp = AppBridge.default;
-                
-                var app = createApp({
-                    apiKey: apiKey,
-                    host: host,
-                });
-                
-                // Get shop from config
-                var shopOrigin = app.hostOrigin;
-                var shop = shopOrigin.replace('https://', '').replace('/admin', '');
-                
-                // Redirect with shop parameter
-                window.location.href = '/install?shop=' + shop;
+                try {
+                    var decodedHost = atob(host);
+                    var shop = "";
+                    
+                    if (decodedHost.includes('myshopify.com')) {
+                        shop = decodedHost.split('/')[0];
+                    } else if (decodedHost.includes('admin.shopify.com/store/')) {
+                        shop = decodedHost.split('admin.shopify.com/store/')[1].split('/')[0] + '.myshopify.com';
+                    }
+
+                    if (shop) {
+                        console.log("Redirecting to install with shop:", shop);
+                        window.location.href = '/install?shop=' + shop + '&host=' + host;
+                    } else {
+                        throw new Error("Could not determine shop from host: " + decodedHost);
+                    }
+                } catch (e) {
+                    console.error("Installation Error:", e);
+                    document.body.innerHTML = '<div style="text-align:center;padding:50px;"><h2>Error</h2><p>' + e.message + '</p><p>Please try installing from Shopify Admin.</p></div>';
+                }
             } else {
                 document.body.innerHTML = '<div style="text-align:center;padding:50px;"><h2>Error</h2><p>Please install this app from your Shopify admin Apps page.</p></div>';
             }
