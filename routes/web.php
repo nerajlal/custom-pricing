@@ -23,7 +23,7 @@ Route::get('/auth/callback', [ShopifyAuthController::class, 'callback'])->name('
 Route::get('/app', function () {
     return response()->view('app')
         ->header('Content-Security-Policy', "frame-ancestors https://" . request()->query('shop') . " https://admin.shopify.com");
-})->name('app');
+})->name('app')->middleware(['auth.shopify']);
 
 // Root redirect (Preserve query parameters for Shopify)
 Route::get('/', function (Request $request) {

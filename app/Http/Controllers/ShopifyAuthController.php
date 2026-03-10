@@ -87,6 +87,15 @@ class ShopifyAuthController extends Controller
 
     Log::info("Redirecting to Shopify OAuth: {$installUrl}");
 
+    // For embedded apps, we often need a top-level redirect
+    if ($request->query('host')) {
+        return view('get-shop', [
+            'apiKey' => $this->apiKey,
+            'host' => $request->query('host'),
+            'redirectUrl' => $installUrl
+        ]);
+    }
+
     return redirect($installUrl);
 }
     
