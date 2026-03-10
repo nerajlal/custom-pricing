@@ -51,6 +51,10 @@ class RedemptionController extends Controller
                 return response()->json(['error' => 'Loyalty account not found'], 404);
             }
 
+            if (!$account->is_enabled) {
+                return response()->json(['error' => 'Loyalty is disabled for this customer'], 403);
+            }
+
             // Validate points
             if ($request->points < $settings->min_points_redemption) {
                 return response()->json([

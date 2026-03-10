@@ -49,6 +49,7 @@ class LoyaltyController extends Controller
     // Update loyalty settings
     public function updateSettings(Request $request)
     {
+        Log::info('Loyalty updateSettings request', ['shop' => $request->shop, 'settings' => $request->settings]);
         try {
             $request->validate([
                 'shop' => 'required|string',
@@ -215,6 +216,7 @@ class LoyaltyController extends Controller
     // Toggle customer loyalty status
     public function toggleCustomerLoyalty(Request $request)
     {
+        Log::info('Loyalty toggleCustomerLoyalty request', $request->all());
         try {
             if (!\Schema::hasColumn('customer_loyalty_accounts', 'is_enabled')) {
                 Log::error('is_enabled column missing in customer_loyalty_accounts table. Please run migration.');
@@ -367,6 +369,11 @@ class LoyaltyController extends Controller
                 'customer_id' => 'required|integer',
                 'shop' => 'required|string'
             ]);
+
+            $store = Store::where('shop_domain', $request->shop)->first();
+            if (!$store) {
+                return response()->json(['has_loyalty' => false]);
+            }
 
             $settings = LoyaltySetting::where('store_id', $store->id)->first();
             if (!$settings || !$settings->is_enabled) {
