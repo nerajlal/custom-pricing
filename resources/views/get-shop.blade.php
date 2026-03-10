@@ -12,13 +12,21 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            var host = "{{ $host ?? '' }}";
-            var apiKey = "{{ $apiKey }}";
-            var redirectUrl = "{{ $redirectUrl ?? '' }}";
+            var host = "{!! $host ?? '' !!}";
+            var apiKey = "{!! $apiKey !!}";
+            var redirectUrl = "{!! $redirectUrl ?? '' !!}";
             
             if (redirectUrl) {
                 // Perform top-level redirect for OAuth
-                window.top.location.href = redirectUrl;
+                try {
+                    if (window.top !== window.self) {
+                        window.top.location.href = redirectUrl;
+                    } else {
+                        window.location.href = redirectUrl;
+                    }
+                } catch (e) {
+                    window.location.href = redirectUrl;
+                }
                 return;
             }
 
