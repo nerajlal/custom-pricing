@@ -14,7 +14,14 @@
         document.addEventListener('DOMContentLoaded', function() {
             var host = "{{ $host ?? '' }}";
             var apiKey = "{{ $apiKey }}";
+            var redirectUrl = "{{ $redirectUrl ?? '' }}";
             
+            if (redirectUrl) {
+                // Perform top-level redirect for OAuth
+                window.top.location.href = redirectUrl;
+                return;
+            }
+
             if (host && apiKey) {
                 // Use Shopify App Bridge to get shop
                 var AppBridge = window['app-bridge'];
