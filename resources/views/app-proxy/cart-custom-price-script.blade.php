@@ -285,36 +285,26 @@
       
       console.log('🧹 Cleaning up old price displays...');
       
-      document.querySelectorAll('.metora-custom-price-badge').forEach(function(badge) {
-        if (!badge.closest('#metora-loyalty-widget')) {
-          badge.remove();
-        }
+      const cartContainers = '.cart-drawer, cart-drawer, .cart, .cart-notification, cart-notification, .drawer__inner, #CartDrawer';
+      
+      document.querySelectorAll(cartContainers).forEach(container => {
+        container.querySelectorAll('.metora-custom-price-badge').forEach(badge => {
+            if (!badge.closest('#metora-loyalty-widget')) badge.remove();
+        });
+        
+        container.querySelectorAll('.metora-custom-price-value, .metora-original-price-strike, .metora-savings-badge').forEach(el => {
+            if (!el.closest('#metora-loyalty-widget')) el.remove();
+        });
       });
       
-      document.querySelectorAll('.metora-custom-price-value').forEach(function(el) {
-        if (!el.closest('#metora-loyalty-widget')) {
-          el.remove();
-        }
-      });
-      
-      document.querySelectorAll('.metora-original-price-strike').forEach(function(el) {
-        if (!el.closest('#metora-loyalty-widget')) {
-          el.remove();
-        }
-      });
-      
-      document.querySelectorAll('.metora-savings-badge').forEach(function(el) {
-        if (!el.closest('#metora-loyalty-widget')) {
-          el.remove();
-        }
-      });
-      
-      document.querySelectorAll('.metora-updated, .metora-total-updated').forEach(function(el) {
-        if (!el.closest('#metora-loyalty-widget')) {
-          el.classList.remove('metora-updated', 'metora-total-updated');
-          el.removeAttribute('data-metora-updated');
-          el.removeAttribute('data-metora-total-updated');
-        }
+      document.querySelectorAll(cartContainers).forEach(container => {
+        container.querySelectorAll('.metora-updated, .metora-total-updated').forEach(el => {
+            if (!el.closest('#metora-loyalty-widget')) {
+              el.classList.remove('metora-updated', 'metora-total-updated');
+              el.removeAttribute('data-metora-updated');
+              el.removeAttribute('data-metora-total-updated');
+            }
+        });
       });
       
       console.log('✅ Cleanup complete (loyalty widget preserved)');

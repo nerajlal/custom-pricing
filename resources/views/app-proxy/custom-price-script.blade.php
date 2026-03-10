@@ -283,57 +283,49 @@
         '.price__container'
     ];
     
-    let injectionPoints = document.querySelectorAll(possibleSelectors.join(','));
+    let allPossiblePoints = document.querySelectorAll(possibleSelectors.join(','));
+    console.log('🔍 Total elements matching price selectors:', allPossiblePoints.length);
     
     // Filter out prices inside our own container or cart/recommendations if needed
     // And ensure we don't inject multiple times into the same parent
     let validPoints = [];
-    injectionPoints.forEach(point => {
-        if (point.closest('.metora-custom-price-container')) return; // Don't inject inside ourselves
-        // **CRITICAL FIX: Exclude Cart/Drawer elements on PDP**
-        if (point.closest('.cart-drawer')) return;
-        if (point.closest('.cart-notification')) return;
-        if (point.closest('.cart-items')) return;
-        if (point.closest('.cart__footer')) return;
-        if (point.closest('cart-drawer')) return; // tag name for Dawn
-        if (point.closest('cart-notification')) return; // tag name for Dawn
-        if (point && point.id && point.id.toLowerCase().includes('cart')) return;
-        if (point && point.className && typeof point.className === 'string' && point.className.toLowerCase().includes('cart-item')) return;
+    allPossiblePoints.forEach((point, idx) => {
+        let reason = '';
+        if (point.closest('.metora-custom-price-container')) reason = 'inside-metora';
+        else if (point.closest('.cart-drawer')) reason = 'cart-drawer-class';
+        else if (point.closest('cart-drawer')) reason = 'cart-drawer-tag';
+        else if (point.closest('.cart-notification') || point.closest('cart-notification')) reason = 'cart-notification';
+        else if (point.closest('.cart-items')) reason = 'cart-items';
+        else if (point.closest('.related-products')) reason = 'related-products';
+        else if (point.closest('.product-recommendations')) reason = 'recommendations';
         
-        // **CRITICAL FIX: Exclude Related Products / Collection Grids on PDP**
-        if (point.closest('.related-products')) return;
-        if (point.closest('.product-recommendations')) return;
-        if (point.closest('.upcells')) return;
-        if (point.closest('.grid__item')) return; // Usually collection items
-        if (point.closest('.card')) return; // Cards in grids
-        if (point.closest('.product-card')) return;
-        if (point.closest('.collection-list')) return;
-        if (point.closest('.featured-collection')) return;
-        
-        // **Prefer points inside the main product container**
         const mainContainer = point.closest('.product__info-container, .product-single__meta, .main-product, #ProductSection');
         const form = point.closest('form[action*="/cart/add"]');
+        if (!mainContainer && !form) reason = 'not-in-main-product';
         
-        if (!mainContainer && !form) {
-            // If it's not clearly in the main product info, it might be a header cart or something. Skip.
+        if (point.parentElement.querySelector('.metora-custom-price-container')) reason = 'duplicate-in-parent';
+
+        if (reason) {
+            // console.log(`  Filtered point ${idx}: ${reason}`, point);
             return;
         }
-
-        // Avoid duplicate injection in same parent
-        if (point.parentElement.querySelector('.metora-custom-price-container')) return;
         
         validPoints.push(point);
     });
 
     // Fallback if no specific price points found
     if (validPoints.length === 0) {
+        console.log('⚠️ No primary price points found, trying fallbacks...');
+        const mainContainer = document.querySelector('.product__info-container, .product-single__meta, .main-product, #ProductSection');
+        
         // Try to find the price inside the product form specifically
-        const formPrice = document.querySelector('form[action*="/cart/add"] .price, form[action*="/cart/add"] [data-price]');
+        const formPrice = (mainContainer || document).querySelector('form[action*="/cart/add"] .price, form[action*="/cart/add"] [data-price]');
+        
         if (formPrice && !formPrice.closest('.metora-custom-price-container')) {
             validPoints.push(formPrice);
         } else {
-             const addToCart = document.querySelector('button[name="add"], .product-form__submit, [type="submit"]');
-             if (addToCart) validPoints.push(addToCart);
+             const addToCart = (mainContainer || document).querySelector('button[name="add"], .product-form__submit');
+             if (addToCart && !addToCart.closest('.cart-drawer')) validPoints.push(addToCart);
         }
     }
     
