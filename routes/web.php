@@ -53,13 +53,13 @@ Route::get('/admin/documentation', function() {
     return view('installation-guide'); // Placeholder
 })->name('admin.documentation');
 // ============================================
-// APP PROXY ROUTES (Storefront Scripts)
+// STOREFRONT SCRIPTS (Public)
 // ============================================
-Route::prefix('app-proxy')->middleware(['auth.proxy'])->group(function () {
+Route::prefix('app-proxy')->group(function () {
     
     // Product page script
     Route::get('/script.js', function(Request $request) {
-        $customerId = $request->query('logged_in_customer_id');
+        $customerId = $request->query('logged_in_customer_id') ?? $request->query('customer_id');
         $jsContent = view('app-proxy.custom-price-script', ['customerId' => $customerId])->render();
         return response($jsContent)
             ->header('Content-Type', 'application/javascript; charset=utf-8')

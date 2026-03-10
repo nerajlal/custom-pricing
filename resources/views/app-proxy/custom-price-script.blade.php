@@ -132,7 +132,7 @@
 
   const CONFIG = {
     //apiUrl: 'https://custompricing.task19.com/api/storefront/custom-price',
-    apiUrl: '{{ env("APP_URL") }}api/storefront/custom-price',
+    apiUrl: '{{ rtrim(env("APP_URL"), "/") }}/api/storefront/custom-price',
 	shop: window.Shopify.shop,
     currency: window.Shopify.currency.active
   };

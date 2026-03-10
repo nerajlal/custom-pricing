@@ -133,8 +133,8 @@
   bodyObserver.observe(document.body, { childList: true, verbose: false, subtree: true, attributes: true });
 
   const CONFIG = {
-    apiUrl: '{{ env("APP_URL") }}api/storefront/custom-price',
-    checkoutApiUrl: '{{ env("APP_URL") }}api/checkout/create',
+    apiUrl: '{{ rtrim(env("APP_URL"), "/") }}/api/storefront/custom-price',
+    checkoutApiUrl: '{{ rtrim(env("APP_URL"), "/") }}/api/checkout/create',
     shop: window.Shopify.shop,
     currency: window.Shopify.currency.active
   };
