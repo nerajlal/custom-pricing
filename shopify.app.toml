@@ -1,6 +1,6 @@
 # Learn more about configuring your Shopify app at shopify.dev/docs/apps/tools/cli/configuration
 
-name = "custom-price-neraj"
+name = "Custom Pricing & Loyalty Rewards"
 client_id = "c38580159e72cd6ca518fdbba4c9e7b5"
 application_url = "https://custompricing.task19.com"
 embedded = false

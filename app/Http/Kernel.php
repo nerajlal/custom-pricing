@@ -69,6 +69,7 @@ class Kernel extends HttpKernel
 
     protected $routeMiddleware = [
         'auth.shopify' => \App\Http\Middleware\VerifyShopifyAuth::class,
+        'auth.proxy' => \App\Http\Middleware\VerifyAppProxy::class,
     ];
 
 }

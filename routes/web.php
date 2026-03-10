@@ -21,7 +21,8 @@ Route::get('/auth/callback', [ShopifyAuthController::class, 'callback'])->name('
 // APP INTERFACE (Protected)
 // ============================================
 Route::get('/app', function () {
-    return view('app');
+    return response()->view('app')
+        ->header('Content-Security-Policy', "frame-ancestors https://" . request()->query('shop') . " https://admin.shopify.com");
 })->name('app');
 
 // Root redirect
@@ -54,7 +55,7 @@ Route::get('/admin/documentation', function() {
 // ============================================
 // APP PROXY ROUTES (Storefront Scripts)
 // ============================================
-Route::prefix('app-proxy')->group(function () {
+Route::prefix('app-proxy')->middleware(['auth.proxy'])->group(function () {
     
     // Product page script
     Route::get('/script.js', function(Request $request) {
