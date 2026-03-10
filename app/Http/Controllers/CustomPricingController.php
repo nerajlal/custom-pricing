@@ -27,11 +27,18 @@ class CustomPricingController extends Controller
         ]);
 
         try {
-            $store = Store::where('shop_domain', $request->shop)->first();
+            // Use store identified by middleware if available
+            $store = $request->attributes->get('store') ?? Store::where('shop_domain', $request->shop)->first();
             
             if (!$store) {
+                Log::error("Store not found for search: {$request->shop}");
                 return response()->json(['message' => 'Store not found. Please re-install the app.'], 404);
             }
+
+            // Log token status (masked) for debugging 401s
+            $token = $store->access_token;
+            $maskedToken = $token ? substr($token, 0, 10) . '...' . substr($token, -5) : 'MISSING';
+            Log::info("Searching customer for store: {$store->shop_domain} with token: {$maskedToken}");
 
             $service = new ShopifyGraphqlService();
 

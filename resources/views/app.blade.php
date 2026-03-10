@@ -199,10 +199,40 @@
         }
         
         .polaris-textfield input:focus,
-        .polaris-textfield textarea:focus {
+        .polaris-textfield textarea:focus,
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        input[type="email"]:focus,
+        select:focus {
             outline: none;
             border-color: var(--p-interactive);
             box-shadow: 0 0 0 1px var(--p-interactive);
+        }
+
+        /* Generic Input/Select Styling for cases without specific wrappers */
+        input[type="text"],
+        input[type="number"],
+        input[type="email"],
+        select {
+            width: 100%;
+            min-height: 36px;
+            padding: 7px 12px;
+            background: var(--p-surface);
+            border: 1px solid var(--p-border-subdued);
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 20px;
+            color: var(--p-text);
+            transition: all 0.1s ease-in-out;
+        }
+
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M10 12l-5-5h10l-5 5z' fill='%236d7175'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 16px;
+            padding-right: 32px;
         }
         
         .polaris-textfield input::placeholder {
@@ -641,7 +671,9 @@
                                 
                                 <div class="polaris-stack gap-3 mb-4">
                                     <div class="polaris-stack-item-fill">
-                                        <input type="text" id="tierProductSearch" class="polaris-textfield" placeholder="Search products...">
+                                        <div class="polaris-textfield">
+                                            <input type="text" id="tierProductSearch" placeholder="Search products...">
+                                        </div>
                                     </div>
                                     <button onclick="searchProductsForTier()" class="polaris-btn polaris-btn-primary">Search</button>
                                 </div>
@@ -658,7 +690,9 @@
                                 <h3 class="polaris-heading mb-4">Tier Members</h3>
                                 <div class="polaris-stack gap-3 mb-4">
                                     <div class="polaris-stack-item-fill">
-                                        <input type="email" id="tierCustomerSearch" class="polaris-textfield" placeholder="Add customer by email...">
+                                        <div class="polaris-textfield">
+                                            <input type="email" id="tierCustomerSearch" placeholder="Add customer by email...">
+                                        </div>
                                     </div>
                                     <button onclick="searchCustomerForTier()" class="polaris-btn">Find</button>
                                 </div>
@@ -681,10 +715,14 @@
                     <div class="polaris-modal-body">
                         <div class="polaris-layout">
                             <label class="polaris-label">Tier Name</label>
-                            <input type="text" id="newTierName" class="polaris-textfield mb-4" placeholder="e.g. Gold Wholesale">
+                            <div class="polaris-textfield mb-4">
+                                <input type="text" id="newTierName" placeholder="e.g. Gold Wholesale">
+                            </div>
                             
                             <label class="polaris-label">Description (Optional)</label>
-                            <input type="text" id="newTierDesc" class="polaris-textfield" placeholder="e.g. VIP customers get $10 off">
+                            <div class="polaris-textfield">
+                                <input type="text" id="newTierDesc" placeholder="e.g. VIP customers get $10 off">
+                            </div>
                         </div>
                     </div>
                     <div class="polaris-modal-footer">
@@ -1133,13 +1171,14 @@ const SHOP_DOMAIN = urlParams.get('shop') || '{{ request()->query("shop") }}';
                             <div class="polaris-stack-item">
                                 <div class="polaris-stack">
                                     <div class="polaris-stack-item">
-                                        <input type="number" 
-                                            class="polaris-text-field" 
-                                            placeholder="Custom Price" 
-                                            step="0.01" 
-                                            min="0"
-                                            style="width: 120px;"
-                                        >
+                                        <div class="polaris-textfield">
+                                            <input type="number" 
+                                                placeholder="Custom Price" 
+                                                step="0.01" 
+                                                min="0"
+                                                style="width: 120px;"
+                                            >
+                                        </div>
                                     </div>
                                     <div class="polaris-stack-item">
                                         <button 
