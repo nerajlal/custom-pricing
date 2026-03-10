@@ -29,7 +29,6 @@ class LoyaltyController extends Controller
                 ['store_id' => $store->id],
                 [
                     'is_enabled' => true,
-                    'allow_all_customers' => false,
                     'points_per_dollar' => 10,
                     'points_value_cents' => 10,
                     'min_points_redemption' => 100,
@@ -37,7 +36,7 @@ class LoyaltyController extends Controller
                     'signup_bonus_points' => 100,
                     'birthday_bonus_enabled' => true,
                     'birthday_bonus_points' => 200
-                ]
+                ] + (\Schema::hasColumn('loyalty_settings', 'allow_all_customers') ? ['allow_all_customers' => false] : [])
             );
 
             return response()->json($settings);
@@ -66,7 +65,14 @@ class LoyaltyController extends Controller
                 return response()->json(['error' => 'Settings not found'], 404);
             }
 
-            $settings->update($request->settings);
+            // Safety check for allow_all_customers column
+            $settingsData = $request->settings;
+            if (isset($settingsData['allow_all_customers']) && !\Schema::hasColumn('loyalty_settings', 'allow_all_customers')) {
+                Log::warning('allow_all_customers column missing in loyalty_settings table. Please run migration.');
+                unset($settingsData['allow_all_customers']);
+            }
+
+            $settings->update($settingsData);
 
             return response()->json(['message' => 'Settings updated', 'settings' => $settings]);
         } catch (\Exception $e) {
@@ -173,8 +179,7 @@ class LoyaltyController extends Controller
                     'current_points_balance' => 0,
                     'total_points_earned' => 0,
                     'points_redeemed' => 0,
-                    'is_enabled' => true
-                ]
+                ] + (\Schema::hasColumn('customer_loyalty_accounts', 'is_enabled') ? ['is_enabled' => true] : [])
             );
 
             // Give signup bonus if new account
@@ -211,6 +216,10 @@ class LoyaltyController extends Controller
     public function toggleCustomerLoyalty(Request $request)
     {
         try {
+            if (!\Schema::hasColumn('customer_loyalty_accounts', 'is_enabled')) {
+                Log::error('is_enabled column missing in customer_loyalty_accounts table. Please run migration.');
+                return response()->json(['error' => 'Database update required. Please run php artisan migrate.'], 500);
+            }
             $request->validate([
                 'account_id' => 'required|integer',
                 'enabled' => 'required|boolean'
