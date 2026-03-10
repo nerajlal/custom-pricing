@@ -68,15 +68,20 @@ class ShopifyAuthController extends Controller
 
     // Check if store already exists and has a token
     $store = Store::where('shop_domain', $shop)->first();
-    if ($store && !empty($store->access_token)) {
+    $force = $request->query('force') === '1' || $request->query('reinstall') === '1';
+
+    if ($store && !empty($store->access_token) && !$force) {
         Log::info("Store {$shop} already installed, redirecting to app");
         
-        // For embedded apps, we might still need to handle the 'host' parameter
-        $appUrl = route('app', $request->query());
+        // Ensure host is propagated
+        $params = $request->query();
+        $appUrl = route('app', $params);
         
-        // If we are in an iframe (embedded), we can just go to the app route
-        // Middleware will handle session/token verification
         return redirect($appUrl);
+    }
+
+    if ($force) {
+        Log::info("Forcing re-authentication for shop: {$shop}");
     }
 
     // Rest of your code stays the same...
