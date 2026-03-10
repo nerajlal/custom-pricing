@@ -136,12 +136,13 @@
   
   window.SHOPIFY_CUSTOMER_ID = customerId;
 
-  const CONFIG = {
-    //apiUrl: 'https://custompricing.task19.com/api/storefront/custom-price',
+  window.metoraConfig = {
     apiUrl: '{{ rtrim(env("APP_URL"), "/") }}/api/storefront/custom-price',
-	shop: window.Shopify.shop,
+    shop: window.Shopify.shop,
     currency: window.Shopify.currency.active
   };
+  
+  const CONFIG = window.metoraConfig;
 
   console.log('⚙️ Config:', CONFIG);
 

@@ -31,22 +31,43 @@
     function injectScript(proxyPath, filename, id) {
       if (document.getElementById(id)) return;
       
+      // We'll try the common proxy path first
       const script = document.createElement('script');
       script.id = id;
       script.async = true;
-      // We use the proxy path to ensure Shopify adds the signature
-      script.src = proxyPath + '/' + filename + '?shop=' + shop + (customerId ? '&logged_in_customer_id=' + customerId : '');
+      
+      // Try with /app-proxy/ prefix if it's not already in the proxyPath
+      let src = proxyPath;
+      if (!src.endsWith('/app-proxy')) {
+          src += '/app-proxy';
+      }
+      script.src = src + '/' + filename + '?shop=' + shop + (customerId ? '&logged_in_customer_id=' + customerId : '');
       
       script.onload = function() {
-        console.log('✅ Loaded: ' + filename);
+        console.log('✅ Loaded: ' + filename + ' via Proxy');
       };
       
       script.onerror = function() {
-        console.warn('⚠️ Failed to load ' + filename + ' via Proxy. Retrying via fallback...');
-        // Fallback to direct app URL if proxy fails (might hit 401 if middleware is strict)
-        const fallbackScript = document.createElement('script');
-        fallbackScript.src = "{{ 'https://custompricing.task19.com' }}/app-proxy/" + filename + "?shop=" + shop + (customerId ? "&logged_in_customer_id=" + customerId : "");
-        document.head.appendChild(fallbackScript);
+        console.warn('⚠️ Failed to load ' + filename + ' via ' + src + '. Trying direct path...');
+        
+        // Try direct path (without the extra /app-proxy if it failed above)
+        const secondarySrc = proxyPath + '/' + filename + '?shop=' + shop + (customerId ? '&logged_in_customer_id=' + customerId : '');
+        const secondaryScript = document.createElement('script');
+        secondaryScript.src = secondarySrc;
+        secondaryScript.id = id + '-retry';
+        
+        secondaryScript.onload = function() {
+            console.log('✅ Loaded: ' + filename + ' via secondary proxy path');
+        };
+        
+        secondaryScript.onerror = function() {
+            console.warn('❌ Proxy failed completely for ' + filename + '. Using fallback.');
+            const fallbackScript = document.createElement('script');
+            fallbackScript.src = "https://custompricing.task19.com/app-proxy/" + filename + "?shop=" + shop + (customerId ? "&logged_in_customer_id=" + customerId : "");
+            document.head.appendChild(fallbackScript);
+        };
+        
+        document.head.appendChild(secondaryScript);
       };
 
       document.head.appendChild(script);
