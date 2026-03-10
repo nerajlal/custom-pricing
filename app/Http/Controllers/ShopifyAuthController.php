@@ -66,6 +66,19 @@ class ShopifyAuthController extends Controller
         ]);
     }
 
+    // Check if store already exists and has a token
+    $store = Store::where('shop_domain', $shop)->first();
+    if ($store && !empty($store->access_token)) {
+        Log::info("Store {$shop} already installed, redirecting to app");
+        
+        // For embedded apps, we might still need to handle the 'host' parameter
+        $appUrl = route('app', $request->query());
+        
+        // If we are in an iframe (embedded), we can just go to the app route
+        // Middleware will handle session/token verification
+        return redirect($appUrl);
+    }
+
     // Rest of your code stays the same...
     if (!preg_match('/^[a-zA-Z0-9][a-zA-Z0-9\-]*\.myshopify\.com$/', $shop)) {
         Log::error("Invalid shop domain: {$shop}");
@@ -285,9 +298,6 @@ class ShopifyAuthController extends Controller
             ['topic' => 'ORDERS_CREATE', 'address' => env('APP_URL') . '/webhooks/orders/create'],
             ['topic' => 'ORDERS_PAID', 'address' => env('APP_URL') . '/webhooks/orders/paid'],
             ['topic' => 'REFUNDS_CREATE', 'address' => env('APP_URL') . '/webhooks/refunds/create'],
-            ['topic' => 'CUSTOMERS_DATA_REQUEST', 'address' => env('APP_URL') . '/webhooks/customers/data_request'],
-            ['topic' => 'CUSTOMERS_REDACT', 'address' => env('APP_URL') . '/webhooks/customers/redact'],
-            ['topic' => 'SHOP_REDACT', 'address' => env('APP_URL') . '/webhooks/shop/redact'],
         ];
 
         foreach ($webhooks as $webhook) {
