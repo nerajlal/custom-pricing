@@ -25,9 +25,9 @@ Route::get('/app', function () {
         ->header('Content-Security-Policy', "frame-ancestors https://" . request()->query('shop') . " https://admin.shopify.com");
 })->name('app');
 
-// Root redirect
-Route::get('/', function () {
-    return redirect('/install');
+// Root redirect (Preserve query parameters for Shopify)
+Route::get('/', function (Request $request) {
+    return redirect()->route('install', $request->query());
 });
 
 // Installation guide

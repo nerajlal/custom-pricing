@@ -224,8 +224,9 @@ class ShopifyAuthController extends Controller
     
         Log::info("=== OAUTH CALLBACK COMPLETED ===");
         
-        // Redirect to Shopify admin apps page
-        return redirect()->away("https://{$shop}/admin/apps");
+        // Redirect to Shopify admin apps page (better for embedded apps)
+        $apiKey = config('shopify.api_key');
+        return redirect()->away("https://{$shop}/admin/apps/{$apiKey}");
     }
 
     /**
