@@ -161,8 +161,9 @@
   
   console.log('📄 Page type:', pageType);
 
-  // **EXIT EARLY ON CART PAGE - Let cart-custom-price-script.blade.php handle it**
-  if (isCartPage) {
+  // **EXIT EARLY ON ACTUAL CART PAGE** (URL check)
+  // But allow background execution if it's just a drawer on a collection/home page
+  if (window.location.pathname.includes('/cart')) {
     console.log('⏭️ Skipping unified script on cart page (cart-specific script will handle it)');
     return;
   }
@@ -615,8 +616,24 @@
     // Expose manual refresh for user debugging
     window.metoraManualRefreshPrice = function() {
         console.log('🛠️ Manual refresh triggered');
-        checkCustomPrice(currentVariantId);
+        if (isProductPage) checkCustomPrice(currentVariantId);
         if (typeof initGridPricing === 'function') initGridPricing();
+    };
+
+    window.metoraDebugGrid = function() {
+        const cards = findProductCards();
+        console.log('🔍 Grid Debug:', {
+            found_cards: cards.length,
+            is_product_page: isProductPage,
+            is_cart_page: isCartPage
+        });
+        cards.forEach((card, i) => {
+            console.log(`Card[${i}]:`, {
+                element: card,
+                variant_id: getVariantIdFromCard(card),
+                product_id: card.getAttribute('data-product-id')
+            });
+        });
     };
 
     // Check initial variant
@@ -711,7 +728,7 @@
   }
 
   function findProductCards() {
-    let cards = [];
+    let allCards = new Set();
     
     const selectors = [
       '.product-card',
@@ -722,41 +739,44 @@
       '.product',
       '.collection-product-card',
       'li[class*="product"]',
-      'div[class*="product-card"]'
+      'div[class*="product-card"]',
+      '.card-wrapper', // Dawn specific
+      '.card' // Broad but common
     ];
 
-    for (let i = 0; i < selectors.length; i++) {
-      let found = document.querySelectorAll(selectors[i]);
-      if (found.length > 0) {
-        cards = found;
-        break;
-      }
-    }
+    selectors.forEach(selector => {
+      document.querySelectorAll(selector).forEach(el => allCards.add(el));
+    });
 
-    if (cards.length === 0) {
+    if (allCards.size === 0) {
       const productLinks = document.querySelectorAll('a[href*="/products/"]');
-      const parentCards = [];
       productLinks.forEach(function(link) {
         let parent = link.parentElement;
         let depth = 0;
         while (parent && depth < 5) {
           if (parent.querySelector('.price, [data-price]')) {
-            if (parentCards.indexOf(parent) === -1) parentCards.push(parent);
+            allCards.add(parent);
             break;
           }
           parent = parent.parentElement;
           depth++;
         }
       });
-      cards = parentCards;
     }
 
-    return Array.from(cards);
+    // Filter out cards that are actually the PDP main info
+    return Array.from(allCards).filter(card => {
+        return !card.closest('.product__info-container, .product-single__meta');
+    });
   }
 
   function getVariantIdFromCard(card) {
-    let element = card.querySelector('[data-variant-id]');
-    if (element) return element.getAttribute('data-variant-id');
+    let element = card.querySelector('[data-variant-id], [data-id], [data-variant]');
+    if (element) return element.getAttribute('data-variant-id') || element.getAttribute('data-id') || element.getAttribute('data-variant');
+
+    // Check card attributes itself
+    if (card.hasAttribute('data-variant-id')) return card.getAttribute('data-variant-id');
+    if (card.hasAttribute('data-id')) return card.getAttribute('data-id');
 
     element = card.querySelector('input[name="id"], select[name="id"]');
     if (element && element.value) return element.value;
@@ -774,6 +794,7 @@
         if (data.variants && data.variants[0] && data.variants[0].id) {
           return data.variants[0].id;
         }
+        if (data.id) return data.id; // Single variant product JSON
       } catch (e) {}
     }
 
