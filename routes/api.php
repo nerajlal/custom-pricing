@@ -78,10 +78,10 @@ Route::prefix('storefront')->group(function () {
     Route::post('/create-draft-order', [CustomPricingController::class, 'createDraftOrder']);
     
     // Loyalty
-    Route::post('/loyalty', [LoyaltyController::class, 'getStorefrontLoyalty']);
-    Route::post('/loyalty/transactions', [LoyaltyController::class, 'getTransactionHistory']);
-    Route::post('/loyalty/settings', [LoyaltyController::class, 'getStorefrontSettings']);
-    Route::post('/loyalty/tiers', [LoyaltyController::class, 'getStorefrontTiers']);
+    Route::match(['get', 'post'], '/loyalty', [LoyaltyController::class, 'getStorefrontLoyalty']);
+    Route::match(['get', 'post'], '/loyalty/transactions', [LoyaltyController::class, 'getTransactionHistory']);
+    Route::match(['get', 'post'], '/loyalty/settings', [LoyaltyController::class, 'getStorefrontSettings']);
+    Route::match(['get', 'post'], '/loyalty/tiers', [LoyaltyController::class, 'getStorefrontTiers']);
     
     // Redemptions
     Route::post('/redemptions/create', [RedemptionController::class, 'createRedemption']);

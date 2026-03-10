@@ -35,7 +35,7 @@
       script.id = id;
       script.async = true;
       // We use the proxy path to ensure Shopify adds the signature
-      script.src = proxyPath + '/app-proxy/' + filename + '?shop=' + shop + (customerId ? '&logged_in_customer_id=' + customerId : '');
+      script.src = proxyPath + '/' + filename + '?shop=' + shop + (customerId ? '&logged_in_customer_id=' + customerId : '');
       
       script.onload = function() {
         console.log('✅ Loaded: ' + filename);

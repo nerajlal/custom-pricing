@@ -183,14 +183,16 @@
         padding: 20px !important;
         border-radius: 12px !important;
         margin: 16px 0 !important;
-        box-shadow: 0 4px 6px rgba(16,185,129,0.2) !important;
+        box-shadow: 0 4px 15px rgba(16,185,129,0.3) !important;
         display: none;
         visibility: visible !important;
         opacity: 1 !important;
         position: relative !important;
-        z-index: 100 !important;
+        z-index: 999999 !important;
         width: 100% !important;
         max-width: 600px !important;
+        min-height: 50px !important;
+        border: 2px solid #047857 !important;
       }
       .metora-custom-price-container.active {
         display: block !important;
@@ -461,6 +463,10 @@
       });
       
       console.log('✅ Price displayed in', containers.length, 'containers');
+      containers.forEach((c, idx) => {
+          const style = window.getComputedStyle(c);
+          console.log(`  Container ${idx}: visible=${c.offsetParent !== null}, height=${c.offsetHeight}, zIndex=${style.zIndex}, display=${style.display}`);
+      });
     }
 
     function hideCustomPrice() {
