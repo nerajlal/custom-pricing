@@ -29,6 +29,7 @@ class LoyaltyController extends Controller
                 ['store_id' => $store->id],
                 [
                     'is_enabled' => true,
+                    'allow_all_customers' => false,
                     'points_per_dollar' => 10,
                     'points_value_cents' => 10,
                     'min_points_redemption' => 100,
@@ -171,7 +172,8 @@ class LoyaltyController extends Controller
                     'customer_email' => $customer['email'],
                     'current_points_balance' => 0,
                     'total_points_earned' => 0,
-                    'points_redeemed' => 0
+                    'points_redeemed' => 0,
+                    'is_enabled' => true
                 ]
             );
 
@@ -202,6 +204,33 @@ class LoyaltyController extends Controller
                 'line' => $e->getLine(),
                 'file' => $e->getFile()
             ], 500);
+        }
+    }
+
+    // Toggle customer loyalty status
+    public function toggleCustomerLoyalty(Request $request)
+    {
+        try {
+            $request->validate([
+                'account_id' => 'required|integer',
+                'enabled' => 'required|boolean'
+            ]);
+
+            $account = CustomerLoyaltyAccount::find($request->account_id);
+            if (!$account) {
+                return response()->json(['error' => 'Account not found'], 404);
+            }
+
+            $account->is_enabled = $request->enabled;
+            $account->save();
+
+            return response()->json([
+                'message' => 'Customer loyalty ' . ($request->enabled ? 'enabled' : 'disabled') . ' successfully',
+                'account' => $account
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Loyalty toggleCustomerLoyalty error: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to toggle status'], 500);
         }
     }
 
@@ -330,8 +359,8 @@ class LoyaltyController extends Controller
                 'shop' => 'required|string'
             ]);
 
-            $store = Store::where('shop_domain', $request->shop)->first();
-            if (!$store) {
+            $settings = LoyaltySetting::where('store_id', $store->id)->first();
+            if (!$settings || !$settings->is_enabled) {
                 return response()->json(['has_loyalty' => false]);
             }
 
@@ -340,17 +369,34 @@ class LoyaltyController extends Controller
                 ->where('shopify_customer_id', $request->customer_id)
                 ->first();
 
-            if (!$account) {
+            // Logic:
+            // 1. If global toggle "allow_all_customers" is TRUE:
+            //    - If account exists AND is_enabled is FALSE, deny.
+            //    - Otherwise, allow (create account if doesn't exist).
+            // 2. If "allow_all_customers" is FALSE:
+            //    - Only allow if account exists AND is_enabled is TRUE.
+
+            $hasLoyalty = false;
+            if ($settings->allow_all_customers) {
+                if ($account) {
+                    $hasLoyalty = $account->is_enabled;
+                } else {
+                    $hasLoyalty = true; // All allowed by default
+                }
+            } else {
+                $hasLoyalty = $account ? $account->is_enabled : false;
+            }
+
+            if (!$hasLoyalty) {
                 return response()->json(['has_loyalty' => false]);
             }
 
-            $settings = LoyaltySetting::where('store_id', $store->id)->first();
-
+            // If we allow all but account doesn't exist, we might want to return some defaults
             return response()->json([
                 'has_loyalty' => true,
-                'points_balance' => $account->current_points_balance,
-                'tier' => $account->tier,
-                'points_value' => $settings ? $settings->calculateDiscountForPoints($account->current_points_balance) : 0
+                'points_balance' => $account ? $account->current_points_balance : 0,
+                'tier' => $account ? $account->tier : null,
+                'points_value' => $account ? $settings->calculateDiscountForPoints($account->current_points_balance) : 0
             ]);
         } catch (\Exception $e) {
             Log::error('Loyalty getStorefrontLoyalty error: ' . $e->getMessage());
@@ -385,8 +431,27 @@ class LoyaltyController extends Controller
                 ->where('shopify_customer_id', $order['customer']['id'])
                 ->first();
 
-            if (!$account) {
-                return response()->json(['message' => 'No loyalty account'], 200);
+            // Check if we should award points based on global vs per-customer logic
+            $shouldAward = false;
+            if ($settings->allow_all_customers) {
+                if ($account) {
+                    $shouldAward = $account->is_enabled;
+                } else {
+                    // Create account automatically
+                    $account = CustomerLoyaltyAccount::create([
+                        'store_id' => $store->id,
+                        'shopify_customer_id' => $order['customer']['id'],
+                        'customer_email' => $order['customer']['email'] ?? '',
+                        'is_enabled' => true
+                    ]);
+                    $shouldAward = true;
+                }
+            } else {
+                $shouldAward = $account ? $account->is_enabled : false;
+            }
+
+            if (!$shouldAward || !$account) {
+                return response()->json(['message' => 'Loyalty not active for this customer'], 200);
             }
 
             // Calculate points
