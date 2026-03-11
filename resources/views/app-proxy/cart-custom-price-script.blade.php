@@ -203,21 +203,20 @@
       setupQuantityWatchers();
       listenForCartUpdates();
       
-      // **DO NOT SETUP MUTATION OBSERVER - IT CAUSES THE LOOP**
-      // interceptCartRender(); // DISABLED
-      
-      // Mark initialization complete
-      window.metoraInitComplete = true;
-      
-      // Trigger loyalty refresh after delay
-      setTimeout(function() {
-          if (window.metoraLoyalty) {
-              console.log('🔄 Triggering one-time loyalty refresh...');
-              triggerLoyaltyRefresh();
+      // Setup MutationObserver for persistent updates (detect AJAX cart changes)
+      if (cartMutationObserver) {
+          const cartContainer = document.querySelector('.cart, #cart, .cart-page, cart-items, .drawer__cart-items-wrapper');
+          if (cartContainer) {
+              cartMutationObserver.observe(cartContainer, {
+                  childList: true,
+                  subtree: true,
+                  characterData: false
+              });
+              console.log('✅ Persistent MutationObserver active');
           }
-      }, 2000);
+      }
       
-      console.log('✅ All handlers initialized (MutationObserver DISABLED to prevent loops)');
+      console.log('✅ All handlers initialized');
     });
   }
 
@@ -734,12 +733,26 @@
 
   window.metoraDebugCart = function() {
       console.log('🔍 Cart Debug:', {
-          customerId: window.SHOPIFY_CUSTOMER_ID,
-          prices: window.metoraCustomPrices,
+          customerId: window.SHOPIFY_CUSTOMER_ID || customerId,
+          pricesCount: Object.keys(window.metoraCustomPrices).length,
           updateInProgress: window.metoraUpdateInProgress
       });
-      document.querySelectorAll('tr, .cart-item, [class*="cart-item"]').forEach(row => {
-          console.log('Row element:', row, 'InnerHTML contains variant?', row.innerHTML.match(/\d{10,}/));
+      // Find all rows
+      const rows = document.querySelectorAll('tr, .cart-item, [class*="cart-item"]');
+      console.log(`Found ${rows.length} potential cart rows`);
+      
+      rows.forEach((row, i) => {
+          const isItemRow = row.innerHTML.match(/\d{10,}/); // Simple regex for potential IDs
+          if (isItemRow) {
+              const updated = row.querySelectorAll('.metora-updated').length;
+              const hidden = row.querySelectorAll('[style*="visibility: hidden"]').length;
+              console.log(`Row[${i}]:`, {
+                  element: row,
+                  has_id: isItemRow[0],
+                  updated_elements: updated,
+                  hidden_elements: hidden
+              });
+          }
       });
   };
 

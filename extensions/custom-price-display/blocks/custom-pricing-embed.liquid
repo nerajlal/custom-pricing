@@ -25,52 +25,30 @@
     const shop = "{{ shop.permanent_domain }}";
     const customerId = "{{ customer.id | default: '' }}";
     
-    console.log('🔗 Custom Pricing & Loyalty: App Embed Initializing...');
+    console.log('🔗 Custom Pricing & Loyalty: App Embed Initializing (v4)...');
 
     // Function to inject scripts via Proxy
     function injectScript(proxyPath, filename, id) {
       if (document.getElementById(id)) return;
       
-      // We'll try the common proxy path first
       const script = document.createElement('script');
       script.id = id;
       script.async = true;
       
-      // Primary attempt
-      script.src = proxyPath + '/' + filename + '?shop=' + shop + (customerId ? '&logged_in_customer_id=' + customerId : '');
+      // Attempt 1: Direct Proxy Path
+      const primarySrc = proxyPath + '/' + filename + '?shop=' + shop + (customerId ? '&logged_in_customer_id=' + customerId : '');
+      script.src = primarySrc;
       
       script.onload = function() {
         console.log('✅ Loaded: ' + filename + ' via Proxy');
       };
       
       script.onerror = function() {
-        console.warn('⚠️ Failed to load ' + filename + ' via ' + script.src + '. Trying alternative proxy path...');
-        
-        // Try the other common variation (with /app-proxy/ explicitly added if it failed without it, or vice versa)
-        let altProxyPath = proxyPath;
-        if (altProxyPath.includes('/app-proxy')) {
-            altProxyPath = altProxyPath.replace('/app-proxy', '');
-        } else {
-            altProxyPath += '/app-proxy';
-        }
-        
-        const secondarySrc = altProxyPath + '/' + filename + '?shop=' + shop + (customerId ? '&logged_in_customer_id=' + customerId : '');
-        const secondaryScript = document.createElement('script');
-        secondaryScript.src = secondarySrc;
-        secondaryScript.id = id + '-retry';
-        
-        secondaryScript.onload = function() {
-            console.log('✅ Loaded: ' + filename + ' via alternative proxy path');
-        };
-        
-        secondaryScript.onerror = function() {
-            console.warn('❌ Proxy failed completely for ' + filename + '. Using fallback.');
-            const fallbackScript = document.createElement('script');
-            fallbackScript.src = "https://custompricing.task19.com/app-proxy/" + filename + "?shop=" + shop + (customerId ? "&logged_in_customer_id=" + customerId : "");
-            document.head.appendChild(fallbackScript);
-        };
-        
-        document.head.appendChild(secondaryScript);
+        console.warn('⚠️ Proxy path failed for ' + filename + '. Using direct fallback...');
+        const fallbackScript = document.createElement('script');
+        fallbackScript.src = "https://custompricing.task19.com/app-proxy/" + filename + "?shop=" + shop + (customerId ? "&logged_in_customer_id=" + customerId : "");
+        fallbackScript.id = id + '-fallback';
+        document.head.appendChild(fallbackScript);
       };
 
       document.head.appendChild(script);
