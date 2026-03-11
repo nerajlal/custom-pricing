@@ -217,6 +217,8 @@
       }
       
       console.log('✅ All handlers initialized');
+      // Final absolute update to catch anything missed during initialization
+      setTimeout(() => applyAllUpdates(true), 500);
     });
   }
 
@@ -537,9 +539,9 @@
     }
 }
 
-  function applyAllUpdates() {
-    if (window.metoraUpdateInProgress) {
-      console.log('⏸️ Update already in progress, skipping...');
+  function applyAllUpdates(force = false) {
+    if (window.metoraUpdateInProgress && !force) {
+      console.log('⏸️ Update already in progress, skipping (use force=true to override)...');
       return;
     }
     
@@ -554,7 +556,6 @@
         // Don't remove if it's inside a properly marked parent
         const parent = el.closest('.metora-updated');
         if (!parent || el.classList.contains('metora-custom-price-badge')) {
-          // Only remove the badge itself, not properly nested ones
           if (el.parentElement && !el.parentElement.classList.contains('metora-updated')) {
             el.remove();
           }
@@ -575,10 +576,19 @@
     const cartHide = document.getElementById('metora-cart-hide');
     if (cartHide) cartHide.remove();
     
+    // Release the lock sooner or if forced
+    const delay = force ? 100 : 1000;
     setTimeout(function() {
       window.metoraUpdateInProgress = false;
-    }, 1000);
+    }, delay);
   }
+
+  // Expose manual refresh for cart page
+  window.metoraManualRefreshPrice = function() {
+      console.log('🛠️ Manual cart refresh triggered');
+      window.metoraUpdateInProgress = false; // Emergency reset
+      applyAllUpdates(true);
+  };
   
   // ============================================
     // TRIGGER LOYALTY WIDGET REFRESH
