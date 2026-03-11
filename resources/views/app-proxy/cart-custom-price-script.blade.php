@@ -900,11 +900,29 @@ function updateCartTotalDisplay(newTotal, oldTotal, shopifyOriginalTotal) {
         const el = allElements[i];
         
         if (el.hasAttribute('data-metora-total-updated')) continue;
-        if (el.children.length > 5) continue; // Slightly more relaxed for complex themes
+        
+        // **PROTECTION: Skip containers**
+        // Leaf nodes for prices usually have 0-2 children (span, money, etc.)
+        if (el.children.length > 2) continue; 
+        
+        // Skip obvious containers by class or tag
+        if (el.classList.contains('cart__blocks') || 
+            el.classList.contains('js-contents') || 
+            el.classList.contains('cart__footer') ||
+            el.tagName === 'FORM' || 
+            el.tagName === 'DIV' && el.classList.contains('cart__items')) continue;
+
+        // Skip if contains functional elements
+        if (el.querySelector('button, input, form, a, select')) continue;
+
         if (el.closest('#metora-loyalty-widget')) continue;
         
         const text = el.textContent.trim();
         if (!text) continue;
+        
+        // **PROTECTION: Check text length**
+        // If text is much longer than a price (e.g. "Subtotal $100"), it's likely a container
+        if (text.length > 15) continue; 
 
         // More robust numeric extraction: handles commas, multiple dots, currency symbols
         const cleanText = text.replace(/[^\d.,]/g, '').replace(',', '.');
