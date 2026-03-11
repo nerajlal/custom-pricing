@@ -180,6 +180,27 @@
       font-weight: 700 !important;
       margin-left: 8px !important;
     }
+    
+    /* FORCE VISIBILITY */
+    .metora-updated, 
+    .metora-total-updated, 
+    .metora-custom-price-badge, 
+    .metora-custom-price-value,
+    [data-metora-updated],
+    [data-metora-total-updated] {
+       visibility: visible !important;
+       display: inline-block !important;
+       opacity: 1 !important;
+    }
+    
+    /* Unhide parents if they contain our updated elements */
+    .metora-temporarily-hidden:has(.metora-updated),
+    .price:has(.metora-updated),
+    .cart__price:has(.metora-updated) {
+       display: block !important;
+       visibility: visible !important;
+       opacity: 1 !important;
+    }
   `;
   document.head.appendChild(styles);
 
@@ -267,14 +288,19 @@
   }
 
   async function refreshCartAndPrices() {
-    console.log('🔄 Refreshing cart data and prices...');
+    if (window.metoraRefreshInProgress) return;
     
-    if (window.metoraRefreshInProgress) {
-      console.log('⏸️ Refresh already in progress, skipping...');
-      return;
+    // Check for rate limit recovery
+    const now = Date.now();
+    if (window.metoraLastRefreshTime && (now - window.metoraLastRefreshTime < 3000)) {
+        console.log('⏳ Throttling refresh to prevent 429...');
+        return;
     }
     
     window.metoraRefreshInProgress = true;
+    window.metoraLastRefreshTime = now;
+    
+    console.log('🔄 Refreshing cart data and prices...');
     
     try {
       const response = await fetch('/cart.js');
