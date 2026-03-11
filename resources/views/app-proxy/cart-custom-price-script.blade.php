@@ -751,67 +751,6 @@
              });
         }
     }
-    
-    function checkAndReplace(el) {
-        if (unitPriceUpdated && lineTotalUpdated) return;
-        
-        const text = el.textContent.trim();
-        if (!text) return;
-        if (text.length > 20) return; // Skip long descriptions
-        
-        // Aggressive cleaning
-        const numericText = text.replace(/[^\d.]/g, ''); 
-        const value = parseFloat(numericText);
-        
-        if (isNaN(value)) return;
-        
-        // Unit price
-        if (!unitPriceUpdated && Math.abs(value - priceData.original) < 0.1) {
-           console.log('    ✅ Updating unit price element:', text);
-           el.classList.add('metora-updated');
-           el.innerHTML = createPriceBadge(priceData.custom, priceData.original, symbol);
-           unitPriceUpdated = true;
-        }
-        // Line total
-        else if (!lineTotalUpdated && Math.abs(value - (priceData.original * priceData.quantity)) < 0.1) {
-           console.log('    ✅ Updating line total element:', text);
-           el.classList.add('metora-updated');
-           
-           const totalCustom = priceData.custom * priceData.quantity;
-           const totalOriginal = priceData.original * priceData.quantity;
-           
-           if (totalCustom >= totalOriginal) {
-                // Silent Override
-                el.innerHTML = '<span class="metora-silent-price-badge" style="font-weight:700; color:inherit;">' + 
-                 symbol + totalCustom.toFixed(2) + 
-                 '</span>';
-           } else {
-                // Discount Display
-                el.innerHTML = '<span class="metora-custom-price-value">' + 
-                 symbol + totalCustom.toFixed(2) + 
-                 '</span> <span class="metora-original-price-strike">' + 
-                 symbol + totalOriginal.toFixed(2) + 
-                 '</span>';
-           }
-
-           lineTotalUpdated = true;
-        }
-    }
-    
-    // Start traversal
-    console.log('    🔍 Searching for price', priceData.original, 'in row...');
-    findPriceElements(row);
-
-    if (!unitPriceUpdated && !lineTotalUpdated) {
-         console.log('  ⚠️ Could not find price matching ' + symbol + priceData.original + ' in row via traversal');
-         
-         // Fallback: Aggressive search in row for any price element
-         const possiblePrices = row.querySelectorAll('.price, .cart-item__price, [class*="price"], .money');
-         possiblePrices.forEach(el => {
-            if (unitPriceUpdated && lineTotalUpdated) return;
-            checkAndReplace(el);
-         });
-    }
   }
 
   // **NEW: Global set to track updated elements permanently**
@@ -902,6 +841,7 @@ function updateCartTotalDisplay(newTotal, oldTotal, shopifyOriginalTotal) {
     // Check for active loyalty discount
     let loyaltyDiscount = 0;
     let hasLoyaltyDiscount = false;
+    const symbol = getCurrencySymbol(CONFIG.currency);
     
     try {
         if (window.metoraLoyalty && typeof window.metoraLoyalty.getActiveRedemption === 'function') {
@@ -917,8 +857,6 @@ function updateCartTotalDisplay(newTotal, oldTotal, shopifyOriginalTotal) {
     }
     
     const finalTotal = hasLoyaltyDiscount ? Math.max(0, newTotal - loyaltyDiscount) : newTotal;
-    
-    const symbol = getCurrencySymbol(CONFIG.currency);
     
     console.log('  📊 Shopify original: ' + symbol + shopifyOriginalTotal);
     console.log('  📊 Custom price total: ' + symbol + newTotal);
@@ -1015,12 +953,6 @@ function updateCartTotalDisplay(newTotal, oldTotal, shopifyOriginalTotal) {
         console.log('  ✅ Updated ' + totalUpdatedCount + ' cart total elements successfully!');
     } else if (!componentFound) {
         console.error('  ❌ Could not find ANY cart total elements!');
-        console.log('  💡 The element with value ' + symbol + shopifyOriginalTotal + ' was not found');
-    }
-        
-        console.log('  ✅ Cart total updated successfully!');
-    } else {
-        console.error('  ❌ Could not find cart total element!');
         console.log('  💡 The element with value ' + symbol + shopifyOriginalTotal + ' was not found');
     }
 }
