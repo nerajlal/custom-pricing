@@ -847,14 +847,14 @@ function updateCartTotalDisplay(newTotal, oldTotal, shopifyOriginalTotal) {
     
     const finalTotal = hasLoyaltyDiscount ? Math.max(0, newTotal - loyaltyDiscount) : newTotal;
     
+    const symbol = getCurrencySymbol(CONFIG.currency);
+    
     console.log('  📊 Shopify original: ' + symbol + shopifyOriginalTotal);
     console.log('  📊 Custom price total: ' + symbol + newTotal);
     if (hasLoyaltyDiscount) {
         console.log('  🎫 Loyalty discount: -' + symbol + loyaltyDiscount);
     }
     console.log('  📊 Final total: ' + symbol + finalTotal);
-    
-    const symbol = getCurrencySymbol(CONFIG.currency);
     
     // **Update the text-component cart total**
     const cartTotalComponent = document.querySelector('text-component[ref="cartTotal"], text-component[data-cart-subtotal]');
