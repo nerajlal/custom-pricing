@@ -33,9 +33,9 @@
       
       // Try with different path combinations
       const pathsToTry = [
-          proxyPath + '/' + filename,         // 1. /apps/custom-pricing/script.js (proxies to /app-proxy/script.js OR /script.js)
-          proxyPath + '/app-proxy/' + filename, // 2. /apps/custom-pricing/app-proxy/script.js (fallback for specific setups)
-          '/apps/custom-pricing/' + filename  // 3. Absolute default
+          proxyPath + '/' + filename,           // 1. /apps/custom-pricing/script.js (Root Mapping)
+          proxyPath + '/app-proxy/' + filename,   // 2. /apps/custom-pricing/app-proxy/script.js (Group Mapping)
+          '/apps/custom-pricing/' + filename    // 3. Absolute Hardcoded
       ];
       
       let attempt = 0;
@@ -45,12 +45,15 @@
               console.warn('❌ All proxy paths failed for ' + filename + '. Using direct fallback.');
               const fallbackScript = document.createElement('script');
               // Using actual domain here instead of variable to ensure success
-              fallbackScript.src = "https://custompricing.task19.com/" + (filename === 'script.js' ? 'app-proxy/script.js' : 'app-proxy/' + filename) + "?shop=" + shop + (customerId ? "&logged_in_customer_id=" + customerId : "");
+              // We use /app-proxy/ prefix for direct calls to ensure signature verification if needed
+              fallbackScript.src = "https://custompricing.task19.com/app-proxy/" + filename + "?shop=" + shop + (customerId ? "&logged_in_customer_id=" + customerId : "");
               document.head.appendChild(fallbackScript);
               return;
           }
           
           const currentPath = pathsToTry[attempt];
+          console.log('🔗 Trying path ' + (attempt + 1) + ': ' + currentPath);
+          
           const script = document.createElement('script');
           script.id = id + '-' + attempt;
           script.async = true;
