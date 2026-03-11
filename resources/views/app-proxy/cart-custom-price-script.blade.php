@@ -602,11 +602,19 @@
     });
 
     // Special: Unhide even parents if they are hidden
-    document.querySelectorAll('.metora-updated, .metora-total-updated').forEach(el => {
+    document.querySelectorAll('.metora-updated, .metora-total-updated, [data-metora-total-updated]').forEach(el => {
+        el.style.setProperty('visibility', 'visible', 'important');
+        el.style.setProperty('opacity', '1', 'important');
+        el.style.setProperty('display', 'inline-block', 'important');
+        
         let p = el.parentElement;
         while (p && !p.classList.contains('cart') && !p.classList.contains('cart-drawer')) {
-            if (window.getComputedStyle(p).display === 'none') {
+            const style = window.getComputedStyle(p);
+            if (style.display === 'none') {
                 p.style.setProperty('display', 'block', 'important');
+            }
+            if (style.visibility === 'hidden') {
+                p.style.setProperty('visibility', 'visible', 'important');
             }
             p = p.parentElement;
         }
@@ -626,10 +634,13 @@
         const stickLoop = setInterval(() => {
             count++;
             // Re-run unhider and total check
-            document.querySelectorAll(selectors).forEach(el => {
+            document.querySelectorAll(selectors + ', .metora-updated, .metora-total-updated, [data-metora-total-updated]').forEach(el => {
                 if (el.closest('.cart, #cart, cart-drawer, .drawer__inner, .cart-items')) {
                     el.style.setProperty('visibility', 'visible', 'important');
                     el.style.setProperty('opacity', '1', 'important');
+                    if (window.getComputedStyle(el).display === 'none') {
+                        el.style.setProperty('display', 'inline-block', 'important');
+                    }
                 }
             });
             if (count > 5) {
