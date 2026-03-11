@@ -571,11 +571,27 @@
     
     // 🔓 UNLOCK: Show prices now that custom prices are applied
     const initialHide = document.getElementById('metora-initial-hide');
-    if (initialHide) initialHide.remove();
+    if (initialHide) {
+        initialHide.remove();
+        console.log('🔓 Released initial price hide');
+    }
     
     const cartHide = document.getElementById('metora-cart-hide');
-    if (cartHide) cartHide.remove();
+    if (cartHide) {
+        cartHide.remove();
+        console.log('🔓 Released cart price hide');
+    }
     
+    // Safety: Force all elements to be visible if they were hidden
+    const hiddenElements = document.querySelectorAll('[style*="visibility: hidden"], [style*="opacity: 0"]');
+    hiddenElements.forEach(el => {
+        if (el.closest('.cart, #cart, cart-drawer, .drawer__inner') && 
+           (el.classList.contains('price') || el.classList.contains('money') || el.textContent.includes(symbol))) {
+            el.style.visibility = 'visible';
+            el.style.opacity = '1';
+        }
+    });
+
     // Release the lock sooner or if forced
     const delay = force ? 100 : 1000;
     setTimeout(function() {
