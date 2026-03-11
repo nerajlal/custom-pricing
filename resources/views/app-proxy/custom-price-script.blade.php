@@ -199,7 +199,10 @@
   function startUnifiedPricing() {
       // Check initial variant
       if (typeof checkCustomPrice === 'function') {
-          checkCustomPrice(currentVariantId);
+          // Check initial variant
+          const variantInput = document.querySelector('input[name="id"], select[name="id"]');
+          const vid = variantInput ? variantInput.value : currentVariantId;
+          checkCustomPrice(vid);
           console.log('✨ Product page pricing initialized');
       }
       
@@ -420,34 +423,26 @@
     }
     
     if (validPoints.length > 0) {
-        console.log('📍 Found', validPoints.length, 'injection points for price');
-        validPoints.forEach(point => {
-            const container = containerTemplate.cloneNode(true);
-            
-            // Hide original immediately if it's a price element (not a button/form)
-            // Hide original immediately if it's a price element (not a button/form)
-            if (point.tagName !== 'BUTTON' && point.tagName !== 'FORM') {
-                 point.style.display = 'none';
-                 point.classList.add('metora-temporarily-hidden');
-                 point.classList.add('metora-processed'); // STOP Collection Script from touching this
-            }
-
-            // Logic to insert after price or before button
-            if (point.tagName === 'BUTTON' || point.tagName === 'FORM') {
-                 point.insertBefore(container, point.firstChild);
-            } else {
-                 point.parentNode.insertBefore(container, point.nextSibling);
-            }
-        });
-
-    } else {
-        // Absolute fallback
+        // PICK ONLY THE PRIMARY POINT (usually the first one found in the main info container)
+        // This prevents the "5-6 duplicates" issue
+        const bestPoint = validPoints[0];
+        console.log('📍 Best injection point found:', bestPoint.className);
+        
         const container = containerTemplate.cloneNode(true);
-        document.body.insertBefore(container, document.body.firstChild);
-        container.style.position = 'sticky';
-        container.style.top = '10px';
-        container.style.zIndex = '1000';
-        console.log('⚠️ No points found, injected at top of body');
+        
+        if (bestPoint.tagName !== 'BUTTON' && bestPoint.tagName !== 'FORM') {
+             bestPoint.style.display = 'none';
+             bestPoint.classList.add('metora-temporarily-hidden');
+             bestPoint.classList.add('metora-processed');
+        }
+
+        if (bestPoint.tagName === 'BUTTON' || bestPoint.tagName === 'FORM') {
+             bestPoint.insertBefore(container, bestPoint.firstChild);
+        } else {
+             bestPoint.parentNode.insertBefore(container, bestPoint.nextSibling);
+        }
+    } else {
+        console.log('⚠️ No valid injection points found for PDP badge.');
     }
 
     // 🔓 UNLOCK: Always remove global hide style after setup attempt
@@ -458,10 +453,15 @@
 
 
     async function checkCustomPrice(variantId) {
-      if (!variantId) {
-        console.warn('⚠️ No variant ID');
-        return;
+      if (!variantId) return;
+
+      // Rate limit PDP checks
+      const now = Date.now();
+      if (window.metoraLastPdpCheck && (now - window.metoraLastPdpCheck < 2000)) {
+          console.log('⏳ Throttling PDP re-check...');
+          return;
       }
+      window.metoraLastPdpCheck = now;
 
       console.log('🔍 Checking custom price for variant:', variantId);
       
