@@ -141,6 +141,9 @@
 
   console.log('⚙️ Config:', CONFIG);
 
+  // Global variables
+  let symbol = '$';
+  
   // Store custom prices
   window.metoraCustomPrices = window.metoraCustomPrices || {};
   window.metoraUpdateInProgress = false;
@@ -184,6 +187,9 @@
 
   function init() {
     console.log('🚀 Initializing cart pricing and checkout...');
+    
+    // Initialize global symbol
+    symbol = getCurrencySymbol(CONFIG.currency);
     
     // **CRITICAL: Initialize all flags**
     window.metoraUpdateInProgress = false;
@@ -585,7 +591,7 @@
     // Safety: Force all elements to be visible if they were hidden
     const hiddenElements = document.querySelectorAll('[style*="visibility: hidden"], [style*="opacity: 0"]');
     hiddenElements.forEach(el => {
-        if (el.closest('.cart, #cart, cart-drawer, .drawer__inner') && 
+        if (el.closest('.cart, #cart, cart-drawer, .drawer__inner, .cart-items') && 
            (el.classList.contains('price') || el.classList.contains('money') || el.textContent.includes(symbol))) {
             el.style.visibility = 'visible';
             el.style.opacity = '1';
@@ -636,7 +642,6 @@
 
   function updateCartItem(variantId) {
     const priceData = window.metoraCustomPrices[variantId];
-    const symbol = getCurrencySymbol(CONFIG.currency);
     
     // Find the cart item row - try multiple selectors
     let row = document.querySelector(
@@ -885,8 +890,6 @@ function updateCartTotalDisplay(newTotal, oldTotal, shopifyOriginalTotal) {
     }
     
     const finalTotal = hasLoyaltyDiscount ? Math.max(0, newTotal - loyaltyDiscount) : newTotal;
-    
-    const symbol = getCurrencySymbol(CONFIG.currency);
     
     console.log('  📊 Shopify original: ' + symbol + shopifyOriginalTotal);
     console.log('  📊 Custom price total: ' + symbol + newTotal);
