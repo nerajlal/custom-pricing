@@ -33,10 +33,9 @@
       
       // Try with different path combinations
       const pathsToTry = [
-          proxyPath + '/' + filename, // Standard mapping e.g. /apps/custom-pricing/script.js
-          proxyPath + '/app-proxy/' + filename, // Prefixed mapping e.g. /apps/custom-pricing/app-proxy/script.js
-          '/apps/custom-pricing/' + filename, // Hardcoded fallback 1
-          '/apps/pricing/' + filename // Hardcoded fallback 2
+          proxyPath + '/' + filename,         // 1. /apps/custom-pricing/script.js (proxies to /app-proxy/script.js OR /script.js)
+          proxyPath + '/app-proxy/' + filename, // 2. /apps/custom-pricing/app-proxy/script.js (fallback for specific setups)
+          '/apps/custom-pricing/' + filename  // 3. Absolute default
       ];
       
       let attempt = 0;
@@ -45,7 +44,8 @@
           if (attempt >= pathsToTry.length) {
               console.warn('❌ All proxy paths failed for ' + filename + '. Using direct fallback.');
               const fallbackScript = document.createElement('script');
-              fallbackScript.src = "https://custompricing.task19.com/app-proxy/" + filename + "?shop=" + shop + (customerId ? "&logged_in_customer_id=" + customerId : "");
+              // Using actual domain here instead of variable to ensure success
+              fallbackScript.src = "https://custompricing.task19.com/" + (filename === 'script.js' ? 'app-proxy/script.js' : 'app-proxy/' + filename) + "?shop=" + shop + (customerId ? "&logged_in_customer_id=" + customerId : "");
               document.head.appendChild(fallbackScript);
               return;
           }

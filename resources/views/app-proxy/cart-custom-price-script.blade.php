@@ -613,19 +613,46 @@
     const priceData = window.metoraCustomPrices[variantId];
     const symbol = getCurrencySymbol(CONFIG.currency);
     
-    // Find the cart item row - try multiple selectors
-    const row = document.querySelector(
-      'tr.cart-items__table-row[data-key*="' + variantId + '"], ' +
-      'tr[data-key*="' + variantId + '"], ' +
-      '[data-variant-id="' + variantId + '"]'
-    );
+    // Find the cart item row - try multiple methods
+    const row = findCartRow(variantId);
     
     if (!row) {
       console.log('  ⚠️ Row not found for variant:', variantId);
       return;
     }
     
-    console.log('  ✅ Updating row for variant:', variantId);
+    console.log('  ✅ Updating row for variant:', variantId, '(', row.tagName + (row.className ? '.' + row.className.replace(/\s+/g, '.') : '') + ')');
+
+    function findCartRow(vId) {
+        // Method 1: Standard data attributes ( Dawn, etc)
+        const selectors = [
+            'tr.cart-items__table-row[data-key*="' + vId + '"]',
+            'tr[data-key*="' + vId + '"]',
+            'tr.cart-item[data-key*="' + vId + '"]',
+            '[data-variant-id="' + vId + '"]',
+            '[data-id="' + vId + '"]',
+            '.cart-item[id*="' + vId + '"]'
+        ];
+        
+        for (const selector of selectors) {
+            const el = document.querySelector(selector);
+            if (el) return el;
+        }
+        
+        // Method 2: Search for variant ID in links/inputs within the cart
+        const cartContainers = document.querySelectorAll('.cart-drawer, cart-drawer, .cart, .cart-page, #CartDrawer');
+        for (const container of cartContainers) {
+            // Find inputs/links containing the variant ID
+            const subElements = container.querySelectorAll('a[href*="' + vId + '"], input[value="' + vId + '"], [id*="' + vId + '"]');
+            for (const sub of subElements) {
+                // Find the closest "row-like" container
+                const parentRow = sub.closest('tr, .cart-item, [role="row"], .cart-drawer__item');
+                if (parentRow) return parentRow;
+            }
+        }
+        
+        return null;
+    }
     
     // **NEW: Safer Element Search**
     // Traverses down to find specific price elements instead of raw text replacement

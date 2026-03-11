@@ -133,6 +133,28 @@ Route::get('/loyalty-widget.js', function() {
     })->name('proxy.identify');
 });
 
+// Mirror routes for cases where proxy URL points to ROOT instead of /app-proxy
+Route::get('/script.js', function(Request $request) {
+    $customerId = $request->query('logged_in_customer_id') ?? $request->query('customer_id');
+    $jsContent = view('app-proxy.custom-price-script', ['customerId' => $customerId])->render();
+    return response($jsContent)->header('Content-Type', 'application/javascript; charset=utf-8')->header('Access-Control-Allow-Origin', '*');
+});
+Route::get('/cart-script.js', function() {
+    $jsContent = view('app-proxy.cart-custom-price-script')->render();
+    return response($jsContent)->header('Content-Type', 'application/javascript; charset=utf-8')->header('Access-Control-Allow-Origin', '*');
+});
+Route::get('/loyalty-widget.js', function() {
+    $jsContent = view('app-proxy.loyalty-widget-script')->render();
+    return response($jsContent)->header('Content-Type', 'application/javascript; charset=utf-8')->header('Access-Control-Allow-Origin', '*');
+});
+Route::get('/loyalty-cart.js', function() {
+    $jsContent = view('app-proxy.loyalty-cart-script')->render();
+    return response($jsContent)->header('Content-Type', 'application/javascript; charset=utf-8')->header('Access-Control-Allow-Origin', '*');
+});
+Route::get('/identify-customer', function(Request $request) {
+    return response()->json(['customer_id' => $request->query('logged_in_customer_id'), 'shop' => $request->query('shop'), 'timestamp' => now()->timestamp]);
+});
+
 // Single webhook endpoint for compliance webhooks
 Route::post('/webhooks', function (Request $request) {
     $topic = $request->header('X-Shopify-Topic');
