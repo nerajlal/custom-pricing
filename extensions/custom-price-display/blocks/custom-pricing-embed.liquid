@@ -36,11 +36,9 @@
       script.id = id;
       script.async = true;
       
-      // Try with /app-proxy/ prefix if it's not already in the proxyPath
+      // Shopify Proxy subpath usually maps to a backend path that already includes /app-proxy
+      // If we add it again, we get 404s (e.g. /apps/custom-pricing/app-proxy/script.js)
       let src = proxyPath;
-      if (!src.endsWith('/app-proxy')) {
-          src += '/app-proxy';
-      }
       script.src = src + '/' + filename + '?shop=' + shop + (customerId ? '&logged_in_customer_id=' + customerId : '');
       
       script.onload = function() {

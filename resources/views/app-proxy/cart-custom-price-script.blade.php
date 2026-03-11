@@ -614,11 +614,27 @@
     const symbol = getCurrencySymbol(CONFIG.currency);
     
     // Find the cart item row - try multiple selectors
-    const row = document.querySelector(
+    let row = document.querySelector(
       'tr.cart-items__table-row[data-key*="' + variantId + '"], ' +
       'tr[data-key*="' + variantId + '"], ' +
-      '[data-variant-id="' + variantId + '"]'
+      '[data-variant-id="' + variantId + '"], ' +
+      '[data-id="' + variantId + '"], ' +
+      '.cart-item[data-variant-id="' + variantId + '"]'
     );
+    
+    // Fallback: search for any element that looks like a row and contains the variant ID in a link or data attribute
+    if (!row) {
+        const potentialRows = document.querySelectorAll('tr, .cart-item, [class*="cart-item"], .cart__item');
+        for (let r of potentialRows) {
+            if (r.innerHTML.includes('variant=' + variantId) || 
+                r.innerHTML.includes('/' + variantId) ||
+                r.getAttribute('data-id') == variantId ||
+                r.getAttribute('data-variant-id') == variantId) {
+                row = r;
+                break;
+            }
+        }
+    }
     
     if (!row) {
       console.log('  ⚠️ Row not found for variant:', variantId);
@@ -866,7 +882,11 @@ function updateCartTotalDisplay(newTotal, oldTotal, shopifyOriginalTotal) {
         if (el.closest('#metora-loyalty-widget')) continue;
         
         const text = el.textContent.trim();
-        const numericText = text.replace(/Rs\.?|₹|,|\s/gi, '');
+        // More robust numeric extraction: find the first sequence of digits and a decimal point
+        const numericMatch = text.match(/(\d[\d,.]*)/);
+        if (!numericMatch) continue;
+        
+        const numericText = numericMatch[0].replace(/,/g, '');
         const value = parseFloat(numericText);
         
         // Check if this matches the original total (with some tolerance)

@@ -16,7 +16,7 @@
     
     for (const path of proxyPaths) {
       try {
-        const url = `${path}/app-proxy/identify-customer?shop=${window.Shopify.shop}`;
+        const url = `${path}/identify-customer?shop=${window.Shopify.shop}`;
         const res = await fetch(url);
         if (res.ok) {
            const data = await res.json();
