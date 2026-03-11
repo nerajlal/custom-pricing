@@ -142,7 +142,8 @@
   console.log('⚙️ Config:', CONFIG);
 
   // Global variables
-  let symbol = '$';
+  let symbol = window.Shopify && window.Shopify.currency ? (window.Shopify.currency.active === 'INR' ? '₹' : (window.Shopify.currency.active === 'USD' ? '$' : '')) : '$';
+  if (!symbol) symbol = '$';
   
   // Store custom prices
   window.metoraCustomPrices = window.metoraCustomPrices || {};
@@ -589,12 +590,25 @@
     }
     
     // Safety: Force all elements to be visible if they were hidden
-    const hiddenElements = document.querySelectorAll('[style*="visibility: hidden"], [style*="opacity: 0"]');
-    hiddenElements.forEach(el => {
-        if (el.closest('.cart, #cart, cart-drawer, .drawer__inner, .cart-items') && 
-           (el.classList.contains('price') || el.classList.contains('money') || el.textContent.includes(symbol))) {
-            el.style.visibility = 'visible';
-            el.style.opacity = '1';
+    const selectors = '.price, .money, .cart__price, .product-option, .cart-item__price, [data-cart-item-price], .cart__subtotal, .totals__subtotal-value';
+    const forceVisible = document.querySelectorAll(selectors);
+    forceVisible.forEach(el => {
+        if (el.closest('.cart, #cart, cart-drawer, .drawer__inner, .cart-items, .cart-drawer__items')) {
+            el.style.setProperty('visibility', 'visible', 'important');
+            el.style.setProperty('opacity', '1', 'important');
+            el.style.setProperty('display', 'inline-block', 'important');
+            el.classList.remove('hidden', 'hide', 'visually-hidden');
+        }
+    });
+
+    // Special: Unhide even parents if they are hidden
+    document.querySelectorAll('.metora-updated, .metora-total-updated').forEach(el => {
+        let p = el.parentElement;
+        while (p && !p.classList.contains('cart') && !p.classList.contains('cart-drawer')) {
+            if (window.getComputedStyle(p).display === 'none') {
+                p.style.setProperty('display', 'block', 'important');
+            }
+            p = p.parentElement;
         }
     });
 
@@ -603,6 +617,27 @@
     setTimeout(function() {
       window.metoraUpdateInProgress = false;
     }, delay);
+
+    // **REINFORCEMENT LOOP**: Ensure changes stick for the next 2 seconds
+    // This handles themes that re-render late or based on other script loads
+    if (!window.metoraSticking) {
+        window.metoraSticking = true;
+        let count = 0;
+        const stickLoop = setInterval(() => {
+            count++;
+            // Re-run unhider and total check
+            document.querySelectorAll(selectors).forEach(el => {
+                if (el.closest('.cart, #cart, cart-drawer, .drawer__inner, .cart-items')) {
+                    el.style.setProperty('visibility', 'visible', 'important');
+                    el.style.setProperty('opacity', '1', 'important');
+                }
+            });
+            if (count > 5) {
+                clearInterval(stickLoop);
+                window.metoraSticking = false;
+            }
+        }, 500);
+    }
   }
 
   // Expose manual refresh for cart page
