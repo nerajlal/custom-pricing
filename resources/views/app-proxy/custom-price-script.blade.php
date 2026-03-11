@@ -792,16 +792,14 @@
     // Filter out cards that are actually part of the main PDP or header/navigation
     return Array.from(allCards).filter(card => {
         const isHeader = !!card.closest('header, .header, .sticky-header, #header, nav, .navigation');
-        const isMainInfo = !!card.closest('.product__info-container, .product-single__meta, .product-info-main, #ProductSection, .product-view, .product__info-wrapper, .product-single');
+        const isMainInfo = !!card.closest('.product__info-container, .product-single__meta, .product-info-main, #ProductSection, .product-view, .product__info-wrapper, .product-single, .product-main, .main-product-wrapper');
         const isModal = !!card.closest('.modal, .quick-view, .product-quickview, .cart-drawer, cart-drawer, #CartDrawer');
+        const isFooter = !!card.closest('footer, .footer');
         
-        // Extra check: if on PDP, exclude the container that holds the main product ID
-        if (isProductPage) {
-            const mainProd = document.querySelector('.product__info-container, .product-single__meta, .product-info-main, #ProductSection, .product-view, .product__info-wrapper');
-            if (mainProd && (card === mainProd || mainProd.contains(card))) return false;
-        }
+        // Anti-recursion: if card contains the mainPDP info container, it's NOT a card
+        if (card.querySelector('.product__info-container, .product-single__meta')) return false;
 
-        return !isHeader && !isMainInfo && !isModal;
+        return !isHeader && !isMainInfo && !isModal && !isFooter;
     });
   }
 

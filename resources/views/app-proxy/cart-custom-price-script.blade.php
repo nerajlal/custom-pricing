@@ -1,6 +1,9 @@
 (function() {
   'use strict';
   
+  if (window.metoraCartInitialized) return;
+  window.metoraCartInitialized = true;
+
   console.log('🛒 Complete Cart & Checkout Handler Loaded');
 
   // Robust Customer ID Detection
@@ -724,9 +727,15 @@
       '.cart-item[data-variant-id="' + variantId + '"]'
     );
     
-    // Fallback: search for any element that looks like a row and contains the variant ID in a link or data attribute
+    // Fallback: search for any element that looks like a row and contains the variant ID
     if (!row) {
-        const potentialRows = document.querySelectorAll('tr, .cart-item, [class*="cart-item"], .cart__item');
+        // ONLY search within cart containers to avoid PDP contamination
+        const cartContainers = document.querySelectorAll('.cart-drawer, cart-drawer, .cart, .cart-notification, cart-notification, .drawer__inner, #CartDrawer');
+        let potentialRows = [];
+        cartContainers.forEach(cc => {
+            cc.querySelectorAll('tr, .cart-item, [class*="cart-item"], .cart__item').forEach(r => potentialRows.push(r));
+        });
+
         for (let r of potentialRows) {
             if (r.innerHTML.includes('variant=' + variantId) || 
                 r.innerHTML.includes('/' + variantId) ||
