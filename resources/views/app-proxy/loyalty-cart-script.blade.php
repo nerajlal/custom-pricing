@@ -2,6 +2,9 @@
 (function() {
     'use strict';
     
+    if (window.metoraLoyaltyCartInitialized) return;
+    window.metoraLoyaltyCartInitialized = true;
+    
     console.log('⭐ Loyalty Redemption Widget Loaded');
 function initLoyaltyCart() {
     console.log('🎯 Initializing Loyalty Cart Widget...');

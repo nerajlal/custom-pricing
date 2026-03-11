@@ -54,25 +54,34 @@
       document.head.appendChild(script);
     }
 
-    // Attempt to detect the correct proxy path (Shared logic from existing scripts)
-    // Shopify usually uses one of these defaults if not customized
-    const proxyPaths = ['/apps/custom-pricing', '/apps/pricing', '/apps/custompicker'];
+    // List of likely proxy paths
+    const proxyPaths = ['/apps/custom-pricing', '/apps/pricing', '/apps/custompicker', '/apps/pricing-app'];
     
-    // We'll try the first one and let the script's internal logic handle retries if needed, 
-    // or just assume the most likely one based on the app name.
-    const defaultProxyPath = '/apps/custom-pricing'; 
+    // Discovery: we'll try to find which proxy is working
+    async function discoverProxy() {
+      for (const path of proxyPaths) {
+        try {
+          const res = await fetch(path + '/ping?shop=' + shop);
+          if (res.ok) {
+             console.log('📍 Detected working Proxy path:', path);
+             return path;
+          }
+        } catch(e) {}
+      }
+      return null;
+    }
 
-    // Inject the unified custom pricing script
-    injectScript(defaultProxyPath, 'script.js', 'metora-pricing-script');
-    
-    // Inject the cart script
-    injectScript(defaultProxyPath, 'cart-script.js', 'metora-cart-script');
+    async function init() {
+      const workingPath = await discoverProxy() || proxyPaths[0];
+      
+      // Inject scripts
+      injectScript(workingPath, 'script.js', 'metora-pricing-script');
+      injectScript(workingPath, 'cart-script.js', 'metora-cart-script');
+      injectScript(workingPath, 'loyalty-widget.js', 'metora-loyalty-widget');
+      injectScript(workingPath, 'loyalty-cart.js', 'metora-loyalty-cart');
+    }
 
-    // Inject the loyalty widget script
-    injectScript(defaultProxyPath, 'loyalty-widget.js', 'metora-loyalty-widget');
-
-    // Inject the loyalty cart script
-    injectScript(defaultProxyPath, 'loyalty-cart.js', 'metora-loyalty-cart');
+    init();
 
   })();
 </script>

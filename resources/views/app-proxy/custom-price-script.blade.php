@@ -221,23 +221,24 @@
   // ============================================
   const sharedStyles = document.createElement('style');
   sharedStyles.textContent = `
-    /* Main Product Box (PDP) */
+      /* Main Product Box (PDP) */
     .metora-custom-price-container {
       background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
       color: white !important;
-      padding: 20px !important;
-      border-radius: 12px !important;
-      margin: 16px 0 !important;
-      box-shadow: 0 4px 15px rgba(16,185,129,0.3) !important;
+      padding: 12px 16px !important;
+      border-radius: 8px !important;
+      margin: 10px 0 !important;
+      box-shadow: 0 4px 10px rgba(16,185,129,0.2) !important;
       display: none;
       visibility: visible !important;
       opacity: 1 !important;
       position: relative !important;
-      z-index: 999999 !important;
-      width: 100% !important;
-      max-width: 600px !important;
-      min-height: 50px !important;
-      border: 2px solid #047857 !important;
+      z-index: 10 !important;
+      width: fit-content !important;
+      min-width: 200px !important;
+      max-width: 100% !important;
+      border: 1px solid #047857 !important;
+      line-height: 1.4 !important;
     }
     .metora-custom-price-container.active {
       display: block !important;
@@ -788,9 +789,19 @@
       });
     }
 
-    // Filter out cards that are actually the PDP main info
+    // Filter out cards that are actually part of the main PDP or header/navigation
     return Array.from(allCards).filter(card => {
-        return !card.closest('.product__info-container, .product-single__meta');
+        const isHeader = !!card.closest('header, .header, .sticky-header, #header, nav, .navigation');
+        const isMainInfo = !!card.closest('.product__info-container, .product-single__meta, .product-info-main, #ProductSection, .product-view, .product__info-wrapper, .product-single');
+        const isModal = !!card.closest('.modal, .quick-view, .product-quickview, .cart-drawer, cart-drawer, #CartDrawer');
+        
+        // Extra check: if on PDP, exclude the container that holds the main product ID
+        if (isProductPage) {
+            const mainProd = document.querySelector('.product__info-container, .product-single__meta, .product-info-main, #ProductSection, .product-view, .product__info-wrapper');
+            if (mainProd && (card === mainProd || mainProd.contains(card))) return false;
+        }
+
+        return !isHeader && !isMainInfo && !isModal;
     });
   }
 
