@@ -708,10 +708,18 @@
     }
     
     // Start traversal
+    console.log('    🔍 Searching for price', priceData.original, 'in row...');
     findPriceElements(row);
 
     if (!unitPriceUpdated && !lineTotalUpdated) {
-         console.log('  ⚠️ Could not find price matching', priceData.original , 'in row via traversal');
+         console.log('  ⚠️ Could not find price matching ' + symbol + priceData.original + ' in row via traversal');
+         
+         // Fallback: Aggressive search in row for any price element
+         const possiblePrices = row.querySelectorAll('.price, .cart-item__price, [class*="price"], .money');
+         possiblePrices.forEach(el => {
+            if (unitPriceUpdated && lineTotalUpdated) return;
+            checkAndReplace(el);
+         });
     }
   }
 
@@ -810,7 +818,7 @@ function updateCartTotalDisplay(newTotal, oldTotal, shopifyOriginalTotal) {
             if (redemption && redemption.discount_amount) {
                 loyaltyDiscount = parseFloat(redemption.discount_amount);
                 hasLoyaltyDiscount = true;
-                console.log('  🎫 Applying loyalty discount: ₹' + loyaltyDiscount);
+                console.log('  🎫 Applying loyalty discount: ' + symbol + loyaltyDiscount);
             }
         }
     } catch (err) {
@@ -819,65 +827,63 @@ function updateCartTotalDisplay(newTotal, oldTotal, shopifyOriginalTotal) {
     
     const finalTotal = hasLoyaltyDiscount ? Math.max(0, newTotal - loyaltyDiscount) : newTotal;
     
-    console.log('  📊 Shopify original: ₹' + shopifyOriginalTotal);
-    console.log('  📊 Custom price total: ₹' + newTotal);
-    if (hasLoyaltyDiscount) {
-        console.log('  🎫 Loyalty discount: -₹' + loyaltyDiscount);
-    }
-    console.log('  📊 Final total: ₹' + finalTotal);
-    
     const symbol = getCurrencySymbol(CONFIG.currency);
     
-    // **Update the text-component cart total**
-    const cartTotalComponent = document.querySelector('text-component[ref="cartTotal"], text-component[data-cart-subtotal]');
-    if (cartTotalComponent) {
-        console.log('  🎯 Found cart total component');
-        
-        // Update the value attribute
-        cartTotalComponent.setAttribute('value', symbol + ' ' + finalTotal.toFixed(2));
-        
-        // Update the text content
-        cartTotalComponent.textContent = symbol + ' ' + finalTotal.toFixed(2);
-        
-        // Add styling
-        cartTotalComponent.style.color = '#10b981';
-        cartTotalComponent.style.fontWeight = '700';
-        
-        console.log('  ✅ Cart total component updated to:', symbol + finalTotal.toFixed(2));
-    } else {
-        console.log('  ⚠️ Cart total component not found');
+    console.log('  📊 Shopify original: ' + symbol + shopifyOriginalTotal);
+    console.log('  📊 Custom price total: ' + symbol + newTotal);
+    if (hasLoyaltyDiscount) {
+        console.log('  🎫 Loyalty discount: -' + symbol + loyaltyDiscount);
     }
+    console.log('  📊 Final total: ' + symbol + finalTotal);
+    
+    // **Update common total components**
+    const totalSelectors = [
+        'text-component[ref="cartTotal"]',
+        'text-component[data-cart-subtotal]',
+        '.totals__subtotal-value',
+        '.cart__subtotal-value',
+        '.cart-drawer__footer .totals__subtotal-value',
+        '#cart-subtotal',
+        '.cart__subtotal'
+    ];
+    
+    let componentFound = false;
+    totalSelectors.forEach(selector => {
+        const el = document.querySelector(selector);
+        if (el && !el.hasAttribute('data-metora-total-updated')) {
+            console.log('  🎯 Found cart total component via selector:', selector);
+            el.setAttribute('value', symbol + ' ' + finalTotal.toFixed(2));
+            el.textContent = symbol + finalTotal.toFixed(2);
+            el.style.color = '#10b981';
+            el.style.fontWeight = '700';
+            el.setAttribute('data-metora-total-updated', 'true');
+            componentFound = true;
+        }
+    });
     
     // **AGGRESSIVE SEARCH: Find ANY element with the cart total**
 
-    const allElements = document.querySelectorAll('*:not([data-metora-total-updated])');
+    const allElements = document.querySelectorAll('.cart__footer *, .totals *, #cart-subtotal, .cart__subtotal, [class*="total"]');
     let targetElement = null;
     
     for (let i = 0; i < allElements.length; i++) {
         const el = allElements[i];
         
-        // Skip if already updated
         if (el.hasAttribute('data-metora-total-updated')) continue;
-        
-        // Skip if it has many children (we want leaf nodes)
-        if (el.children.length > 2) continue;
-        
-        // Skip loyalty widget
+        if (el.children.length > 3) continue; // Slightly more relaxed
         if (el.closest('#metora-loyalty-widget')) continue;
         
         const text = el.textContent.trim();
-        const numericText = text.replace(/Rs\.?|₹|,|\s/gi, '');
-        const value = parseFloat(numericText);
+        if (!text) continue;
+
+        // More robust numeric extraction: handles commas, multiple dots, currency symbols
+        const cleanText = text.replace(/[^\d.,]/g, '').replace(',', '.');
+        const value = parseFloat(cleanText);
         
-        // Check if this matches the original total (with some tolerance)
-        if (!isNaN(value) && Math.abs(value - shopifyOriginalTotal) < 1) {
-            // Extra check: is this in a footer/total section?
-            const inFooter = el.closest('.cart__footer, .cart__ctas, .totals, [class*="total"], [class*="cart"]');
-            if (inFooter) {
-                targetElement = el;
-                console.log('  ✅ Found cart total element:', el.className, 'value:', value);
-                break;
-            }
+        if (!isNaN(value) && Math.abs(value - shopifyOriginalTotal) < 0.1) {
+            targetElement = el;
+            console.log('  ✅ Found cart total element:', el.className || el.tagName, 'value:', value);
+            break;
         }
     }
     
@@ -918,7 +924,7 @@ function updateCartTotalDisplay(newTotal, oldTotal, shopifyOriginalTotal) {
         console.log('  ✅ Cart total updated successfully!');
     } else {
         console.error('  ❌ Could not find cart total element!');
-        console.log('  💡 The element with value ₹' + shopifyOriginalTotal + ' was not found');
+        console.log('  💡 The element with value ' + symbol + shopifyOriginalTotal + ' was not found');
     }
 }
 
