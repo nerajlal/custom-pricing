@@ -678,47 +678,46 @@
     }
     
     function checkAndReplace(el) {
-        if (unitPriceUpdated && lineTotalUpdated) return;
+        // Remove the guards to update ALL matches in the row (e.g. mobile/desktop)
+        // if (unitPriceUpdated && lineTotalUpdated) return; 
         
         const text = el.textContent.trim();
         if (!text) return;
         if (text.length > 20) return; // Skip long descriptions
         
         // Aggressive cleaning
-        const numericText = text.replace(/[^\d.]/g, ''); 
-        const value = parseFloat(numericText);
+        const numericMatch = text.match(/(\d[\d,.]*)/);
+        if (!numericMatch) return;
         
-        if (isNaN(value)) return;
+        const numericValue = parseFloat(numericMatch[0].replace(/,/g, ''));
+        if (isNaN(numericValue)) return;
         
-        // Unit price
-        if (!unitPriceUpdated && Math.abs(value - priceData.original) < 0.1) {
-           console.log('    ✅ Updating unit price element:', text);
+        // Unit price match
+        if (Math.abs(numericValue - priceData.original) < 0.1) {
+           console.log('    ✅ Updating price element:', text, '->', priceData.custom);
            el.classList.add('metora-updated');
            el.innerHTML = createPriceBadge(priceData.custom, priceData.original, symbol);
            unitPriceUpdated = true;
         }
-        // Line total
-        else if (!lineTotalUpdated && Math.abs(value - (priceData.original * priceData.quantity)) < 0.1) {
-           console.log('    ✅ Updating line total element:', text);
+        // Line total match
+        else if (Math.abs(numericValue - (priceData.original * priceData.quantity)) < 0.1) {
+           console.log('    ✅ Updating total element:', text, '->', (priceData.custom * priceData.quantity));
            el.classList.add('metora-updated');
            
            const totalCustom = priceData.custom * priceData.quantity;
            const totalOriginal = priceData.original * priceData.quantity;
            
            if (totalCustom >= totalOriginal) {
-                // Silent Override
                 el.innerHTML = '<span class="metora-silent-price-badge" style="font-weight:700; color:inherit;">' + 
                  symbol + totalCustom.toFixed(2) + 
                  '</span>';
            } else {
-                // Discount Display
                 el.innerHTML = '<span class="metora-custom-price-value">' + 
                  symbol + totalCustom.toFixed(2) + 
                  '</span> <span class="metora-original-price-strike">' + 
                  symbol + totalOriginal.toFixed(2) + 
                  '</span>';
            }
-
            lineTotalUpdated = true;
         }
     }
@@ -727,9 +726,22 @@
     findPriceElements(row);
 
     if (!unitPriceUpdated && !lineTotalUpdated) {
-         console.log('  ⚠️ Could not find price matching', priceData.original , 'in row via traversal');
+         console.log('  ⚠️ Could not find price matching', priceData.original , 'in row via traversal. Trying broad search...');
+         // Broad fallback: search all descendants
+         row.querySelectorAll('*').forEach(checkAndReplace);
     }
   }
+
+  window.metoraDebugCart = function() {
+      console.log('🔍 Cart Debug:', {
+          customerId: window.SHOPIFY_CUSTOMER_ID,
+          prices: window.metoraCustomPrices,
+          updateInProgress: window.metoraUpdateInProgress
+      });
+      document.querySelectorAll('tr, .cart-item, [class*="cart-item"]').forEach(row => {
+          console.log('Row element:', row, 'InnerHTML contains variant?', row.innerHTML.match(/\d{10,}/));
+      });
+  };
 
   // **NEW: Global set to track updated elements permanently**
   window.metoraUpdatedElements = window.metoraUpdatedElements || new Set();
@@ -835,12 +847,12 @@ function updateCartTotalDisplay(newTotal, oldTotal, shopifyOriginalTotal) {
     
     const finalTotal = hasLoyaltyDiscount ? Math.max(0, newTotal - loyaltyDiscount) : newTotal;
     
-    console.log('  📊 Shopify original: ₹' + shopifyOriginalTotal);
-    console.log('  📊 Custom price total: ₹' + newTotal);
+    console.log('  📊 Shopify original: ' + symbol + shopifyOriginalTotal);
+    console.log('  📊 Custom price total: ' + symbol + newTotal);
     if (hasLoyaltyDiscount) {
-        console.log('  🎫 Loyalty discount: -₹' + loyaltyDiscount);
+        console.log('  🎫 Loyalty discount: -' + symbol + loyaltyDiscount);
     }
-    console.log('  📊 Final total: ₹' + finalTotal);
+    console.log('  📊 Final total: ' + symbol + finalTotal);
     
     const symbol = getCurrencySymbol(CONFIG.currency);
     

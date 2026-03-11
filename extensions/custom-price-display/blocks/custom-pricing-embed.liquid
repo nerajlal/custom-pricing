@@ -36,26 +36,31 @@
       script.id = id;
       script.async = true;
       
-      // Shopify Proxy subpath usually maps to a backend path that already includes /app-proxy
-      // If we add it again, we get 404s (e.g. /apps/custom-pricing/app-proxy/script.js)
-      let src = proxyPath;
-      script.src = src + '/' + filename + '?shop=' + shop + (customerId ? '&logged_in_customer_id=' + customerId : '');
+      // Primary attempt
+      script.src = proxyPath + '/' + filename + '?shop=' + shop + (customerId ? '&logged_in_customer_id=' + customerId : '');
       
       script.onload = function() {
         console.log('✅ Loaded: ' + filename + ' via Proxy');
       };
       
       script.onerror = function() {
-        console.warn('⚠️ Failed to load ' + filename + ' via ' + src + '. Trying direct path...');
+        console.warn('⚠️ Failed to load ' + filename + ' via ' + script.src + '. Trying alternative proxy path...');
         
-        // Try direct path (without the extra /app-proxy if it failed above)
-        const secondarySrc = proxyPath + '/' + filename + '?shop=' + shop + (customerId ? '&logged_in_customer_id=' + customerId : '');
+        // Try the other common variation (with /app-proxy/ explicitly added if it failed without it, or vice versa)
+        let altProxyPath = proxyPath;
+        if (altProxyPath.includes('/app-proxy')) {
+            altProxyPath = altProxyPath.replace('/app-proxy', '');
+        } else {
+            altProxyPath += '/app-proxy';
+        }
+        
+        const secondarySrc = altProxyPath + '/' + filename + '?shop=' + shop + (customerId ? '&logged_in_customer_id=' + customerId : '');
         const secondaryScript = document.createElement('script');
         secondaryScript.src = secondarySrc;
         secondaryScript.id = id + '-retry';
         
         secondaryScript.onload = function() {
-            console.log('✅ Loaded: ' + filename + ' via secondary proxy path');
+            console.log('✅ Loaded: ' + filename + ' via alternative proxy path');
         };
         
         secondaryScript.onerror = function() {

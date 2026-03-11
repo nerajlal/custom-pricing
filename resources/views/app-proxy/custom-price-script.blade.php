@@ -161,12 +161,55 @@
   
   console.log('📄 Page type:', pageType);
 
-  // **EXIT EARLY ON ACTUAL CART PAGE** (URL check)
-  // But allow background execution if it's just a drawer on a collection/home page
-  if (window.location.pathname.includes('/cart')) {
-    console.log('⏭️ Skipping unified script on cart page (cart-specific script will handle it)');
-    return;
+    // Expose manual refresh for user debugging
+    window.metoraManualRefreshPrice = function() {
+        console.log('🛠️ Manual refresh triggered');
+        if (typeof checkCustomPrice === 'function' && typeof currentVariantId !== 'undefined') checkCustomPrice(currentVariantId);
+        if (typeof initGridPricing === 'function') initGridPricing();
+    };
+
+    window.metoraDebugGrid = function() {
+        if (typeof findProductCards !== 'function') {
+            console.log('❌ Grid functions not available on this page');
+            return;
+        }
+        const cards = findProductCards();
+        console.log('🔍 Grid Debug:', {
+            found_cards: cards.length,
+            is_product_page: typeof isProductPage !== 'undefined' ? isProductPage : 'unknown'
+        });
+        cards.forEach((card, i) => {
+            console.log(`Card[${i}]:`, {
+                element: card,
+                variant_id: typeof getVariantIdFromCard === 'function' ? getVariantIdFromCard(card) : 'unknown',
+                product_id: card.getAttribute('data-product-id')
+            });
+        });
+    };
+
+  // **EXECUTION LOGIC**
+  if (!window.location.pathname.includes('/cart')) {
+      console.log('🚀 Initializing unified pricing for non-cart page...');
+      // Start the actual logic
+      setTimeout(startUnifiedPricing, 100); 
+  } else {
+      console.log('⏭️ Skipping unified script execution on cart page (debug functions remain available)');
   }
+
+  function startUnifiedPricing() {
+      // Check initial variant
+      if (typeof checkCustomPrice === 'function') {
+          checkCustomPrice(currentVariantId);
+          console.log('✨ Product page pricing initialized');
+      }
+      
+      // Grid pricing
+      if (typeof initGridPricing === 'function') {
+          initGridPricing();
+      }
+  }
+
+  // Helper functions and definitions follow (accessible to metoraDebugGrid)
 
   // ============================================
   // SHARED STYLES (PDP & GRIDS)
@@ -613,28 +656,7 @@
         pdpObserver.observe(document.body, { childList: true, subtree: true });
     }
 
-    // Expose manual refresh for user debugging
-    window.metoraManualRefreshPrice = function() {
-        console.log('🛠️ Manual refresh triggered');
-        if (isProductPage) checkCustomPrice(currentVariantId);
-        if (typeof initGridPricing === 'function') initGridPricing();
-    };
-
-    window.metoraDebugGrid = function() {
-        const cards = findProductCards();
-        console.log('🔍 Grid Debug:', {
-            found_cards: cards.length,
-            is_product_page: isProductPage,
-            is_cart_page: isCartPage
-        });
-        cards.forEach((card, i) => {
-            console.log(`Card[${i}]:`, {
-                element: card,
-                variant_id: getVariantIdFromCard(card),
-                product_id: card.getAttribute('data-product-id')
-            });
-        });
-    };
+    // (Moved to top for global availability)
 
     // Check initial variant
     checkCustomPrice(currentVariantId);
