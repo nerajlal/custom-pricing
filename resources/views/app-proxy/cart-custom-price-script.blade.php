@@ -1,9 +1,6 @@
 (function() {
   'use strict';
   
-  if (window.metoraCartInitialized) return;
-  window.metoraCartInitialized = true;
-
   console.log('🛒 Complete Cart & Checkout Handler Loaded');
 
   // Robust Customer ID Detection
@@ -144,10 +141,6 @@
 
   console.log('⚙️ Config:', CONFIG);
 
-  // Global variables
-  let symbol = window.Shopify && window.Shopify.currency ? (window.Shopify.currency.active === 'INR' ? '₹' : (window.Shopify.currency.active === 'USD' ? '$' : '')) : '$';
-  if (!symbol) symbol = '$';
-  
   // Store custom prices
   window.metoraCustomPrices = window.metoraCustomPrices || {};
   window.metoraUpdateInProgress = false;
@@ -183,27 +176,6 @@
       font-weight: 700 !important;
       margin-left: 8px !important;
     }
-    
-    /* FORCE VISIBILITY */
-    .metora-updated, 
-    .metora-total-updated, 
-    .metora-custom-price-badge, 
-    .metora-custom-price-value,
-    [data-metora-updated],
-    [data-metora-total-updated] {
-       visibility: visible !important;
-       display: inline-block !important;
-       opacity: 1 !important;
-    }
-    
-    /* Unhide parents if they contain our updated elements */
-    .metora-temporarily-hidden:has(.metora-updated),
-    .price:has(.metora-updated),
-    .cart__price:has(.metora-updated) {
-       display: block !important;
-       visibility: visible !important;
-       opacity: 1 !important;
-    }
   `;
   document.head.appendChild(styles);
 
@@ -212,9 +184,6 @@
 
   function init() {
     console.log('🚀 Initializing cart pricing and checkout...');
-    
-    // Initialize global symbol
-    symbol = getCurrencySymbol(CONFIG.currency);
     
     // **CRITICAL: Initialize all flags**
     window.metoraUpdateInProgress = false;
@@ -234,22 +203,21 @@
       setupQuantityWatchers();
       listenForCartUpdates();
       
-      // Setup MutationObserver for persistent updates (detect AJAX cart changes)
-      if (cartMutationObserver) {
-          const cartContainer = document.querySelector('.cart, #cart, .cart-page, cart-items, .drawer__cart-items-wrapper');
-          if (cartContainer) {
-              cartMutationObserver.observe(cartContainer, {
-                  childList: true,
-                  subtree: true,
-                  characterData: false
-              });
-              console.log('✅ Persistent MutationObserver active');
-          }
-      }
+      // **DO NOT SETUP MUTATION OBSERVER - IT CAUSES THE LOOP**
+      // interceptCartRender(); // DISABLED
       
-      console.log('✅ All handlers initialized');
-      // Final absolute update to catch anything missed during initialization
-      setTimeout(() => applyAllUpdates(true), 500);
+      // Mark initialization complete
+      window.metoraInitComplete = true;
+      
+      // Trigger loyalty refresh after delay
+      setTimeout(function() {
+          if (window.metoraLoyalty) {
+              console.log('🔄 Triggering one-time loyalty refresh...');
+              triggerLoyaltyRefresh();
+          }
+      }, 2000);
+      
+      console.log('✅ All handlers initialized (MutationObserver DISABLED to prevent loops)');
     });
   }
 
@@ -291,19 +259,14 @@
   }
 
   async function refreshCartAndPrices() {
-    if (window.metoraRefreshInProgress) return;
+    console.log('🔄 Refreshing cart data and prices...');
     
-    // Check for rate limit recovery
-    const now = Date.now();
-    if (window.metoraLastRefreshTime && (now - window.metoraLastRefreshTime < 3000)) {
-        console.log('⏳ Throttling refresh to prevent 429...');
-        return;
+    if (window.metoraRefreshInProgress) {
+      console.log('⏸️ Refresh already in progress, skipping...');
+      return;
     }
     
     window.metoraRefreshInProgress = true;
-    window.metoraLastRefreshTime = now;
-    
-    console.log('🔄 Refreshing cart data and prices...');
     
     try {
       const response = await fetch('/cart.js');
@@ -575,9 +538,9 @@
     }
 }
 
-  function applyAllUpdates(force = false) {
-    if (window.metoraUpdateInProgress && !force) {
-      console.log('⏸️ Update already in progress, skipping (use force=true to override)...');
+  function applyAllUpdates() {
+    if (window.metoraUpdateInProgress) {
+      console.log('⏸️ Update already in progress, skipping...');
       return;
     }
     
@@ -592,6 +555,7 @@
         // Don't remove if it's inside a properly marked parent
         const parent = el.closest('.metora-updated');
         if (!parent || el.classList.contains('metora-custom-price-badge')) {
+          // Only remove the badge itself, not properly nested ones
           if (el.parentElement && !el.parentElement.classList.contains('metora-updated')) {
             el.remove();
           }
@@ -607,85 +571,15 @@
     
     // 🔓 UNLOCK: Show prices now that custom prices are applied
     const initialHide = document.getElementById('metora-initial-hide');
-    if (initialHide) {
-        initialHide.remove();
-        console.log('🔓 Released initial price hide');
-    }
+    if (initialHide) initialHide.remove();
     
     const cartHide = document.getElementById('metora-cart-hide');
-    if (cartHide) {
-        cartHide.remove();
-        console.log('🔓 Released cart price hide');
-    }
+    if (cartHide) cartHide.remove();
     
-    // Safety: Force all elements to be visible if they were hidden
-    const selectors = '.price, .money, .cart__price, .product-option, .cart-item__price, [data-cart-item-price], .cart__subtotal, .totals__subtotal-value';
-    const forceVisible = document.querySelectorAll(selectors);
-    forceVisible.forEach(el => {
-        if (el.closest('.cart, #cart, cart-drawer, .drawer__inner, .cart-items, .cart-drawer__items')) {
-            el.style.setProperty('visibility', 'visible', 'important');
-            el.style.setProperty('opacity', '1', 'important');
-            el.style.setProperty('display', 'inline-block', 'important');
-            el.classList.remove('hidden', 'hide', 'visually-hidden');
-        }
-    });
-
-    // Special: Unhide even parents if they are hidden
-    document.querySelectorAll('.metora-updated, .metora-total-updated, [data-metora-total-updated]').forEach(el => {
-        el.style.setProperty('visibility', 'visible', 'important');
-        el.style.setProperty('opacity', '1', 'important');
-        el.style.setProperty('display', 'inline-block', 'important');
-        
-        let p = el.parentElement;
-        while (p && !p.classList.contains('cart') && !p.classList.contains('cart-drawer')) {
-            const style = window.getComputedStyle(p);
-            if (style.display === 'none') {
-                p.style.setProperty('display', 'block', 'important');
-            }
-            if (style.visibility === 'hidden') {
-                p.style.setProperty('visibility', 'visible', 'important');
-            }
-            p = p.parentElement;
-        }
-    });
-
-    // Release the lock sooner or if forced
-    const delay = force ? 100 : 1000;
     setTimeout(function() {
       window.metoraUpdateInProgress = false;
-    }, delay);
-
-    // **REINFORCEMENT LOOP**: Ensure changes stick for the next 2 seconds
-    // This handles themes that re-render late or based on other script loads
-    if (!window.metoraSticking) {
-        window.metoraSticking = true;
-        let count = 0;
-        const stickLoop = setInterval(() => {
-            count++;
-            // Re-run unhider and total check
-            document.querySelectorAll(selectors + ', .metora-updated, .metora-total-updated, [data-metora-total-updated]').forEach(el => {
-                if (el.closest('.cart, #cart, cart-drawer, .drawer__inner, .cart-items')) {
-                    el.style.setProperty('visibility', 'visible', 'important');
-                    el.style.setProperty('opacity', '1', 'important');
-                    if (window.getComputedStyle(el).display === 'none') {
-                        el.style.setProperty('display', 'inline-block', 'important');
-                    }
-                }
-            });
-            if (count > 5) {
-                clearInterval(stickLoop);
-                window.metoraSticking = false;
-            }
-        }, 500);
-    }
+    }, 1000);
   }
-
-  // Expose manual refresh for cart page
-  window.metoraManualRefreshPrice = function() {
-      console.log('🛠️ Manual cart refresh triggered');
-      window.metoraUpdateInProgress = false; // Emergency reset
-      applyAllUpdates(true);
-  };
   
   // ============================================
     // TRIGGER LOYALTY WIDGET REFRESH
@@ -717,35 +611,14 @@
 
   function updateCartItem(variantId) {
     const priceData = window.metoraCustomPrices[variantId];
+    const symbol = getCurrencySymbol(CONFIG.currency);
     
     // Find the cart item row - try multiple selectors
-    let row = document.querySelector(
+    const row = document.querySelector(
       'tr.cart-items__table-row[data-key*="' + variantId + '"], ' +
       'tr[data-key*="' + variantId + '"], ' +
-      '[data-variant-id="' + variantId + '"], ' +
-      '[data-id="' + variantId + '"], ' +
-      '.cart-item[data-variant-id="' + variantId + '"]'
+      '[data-variant-id="' + variantId + '"]'
     );
-    
-    // Fallback: search for any element that looks like a row and contains the variant ID
-    if (!row) {
-        // ONLY search within cart containers to avoid PDP contamination
-        const cartContainers = document.querySelectorAll('.cart-drawer, cart-drawer, .cart, .cart-notification, cart-notification, .drawer__inner, #CartDrawer');
-        let potentialRows = [];
-        cartContainers.forEach(cc => {
-            cc.querySelectorAll('tr, .cart-item, [class*="cart-item"], .cart__item').forEach(r => potentialRows.push(r));
-        });
-
-        for (let r of potentialRows) {
-            if (r.innerHTML.includes('variant=' + variantId) || 
-                r.innerHTML.includes('/' + variantId) ||
-                r.getAttribute('data-id') == variantId ||
-                r.getAttribute('data-variant-id') == variantId) {
-                row = r;
-                break;
-            }
-        }
-    }
     
     if (!row) {
       console.log('  ⚠️ Row not found for variant:', variantId);
@@ -789,46 +662,47 @@
     }
     
     function checkAndReplace(el) {
-        // Remove the guards to update ALL matches in the row (e.g. mobile/desktop)
-        // if (unitPriceUpdated && lineTotalUpdated) return; 
+        if (unitPriceUpdated && lineTotalUpdated) return;
         
         const text = el.textContent.trim();
         if (!text) return;
         if (text.length > 20) return; // Skip long descriptions
         
         // Aggressive cleaning
-        const numericMatch = text.match(/(\d[\d,.]*)/);
-        if (!numericMatch) return;
+        const numericText = text.replace(/[^\d.]/g, ''); 
+        const value = parseFloat(numericText);
         
-        const numericValue = parseFloat(numericMatch[0].replace(/,/g, ''));
-        if (isNaN(numericValue)) return;
+        if (isNaN(value)) return;
         
-        // Unit price match
-        if (Math.abs(numericValue - priceData.original) < 0.1) {
-           console.log('    ✅ Updating price element:', text, '->', priceData.custom);
+        // Unit price
+        if (!unitPriceUpdated && Math.abs(value - priceData.original) < 0.1) {
+           console.log('    ✅ Updating unit price element:', text);
            el.classList.add('metora-updated');
            el.innerHTML = createPriceBadge(priceData.custom, priceData.original, symbol);
            unitPriceUpdated = true;
         }
-        // Line total match
-        else if (Math.abs(numericValue - (priceData.original * priceData.quantity)) < 0.1) {
-           console.log('    ✅ Updating total element:', text, '->', (priceData.custom * priceData.quantity));
+        // Line total
+        else if (!lineTotalUpdated && Math.abs(value - (priceData.original * priceData.quantity)) < 0.1) {
+           console.log('    ✅ Updating line total element:', text);
            el.classList.add('metora-updated');
            
            const totalCustom = priceData.custom * priceData.quantity;
            const totalOriginal = priceData.original * priceData.quantity;
            
            if (totalCustom >= totalOriginal) {
+                // Silent Override
                 el.innerHTML = '<span class="metora-silent-price-badge" style="font-weight:700; color:inherit;">' + 
                  symbol + totalCustom.toFixed(2) + 
                  '</span>';
            } else {
+                // Discount Display
                 el.innerHTML = '<span class="metora-custom-price-value">' + 
                  symbol + totalCustom.toFixed(2) + 
                  '</span> <span class="metora-original-price-strike">' + 
                  symbol + totalOriginal.toFixed(2) + 
                  '</span>';
            }
+
            lineTotalUpdated = true;
         }
     }
@@ -837,36 +711,9 @@
     findPriceElements(row);
 
     if (!unitPriceUpdated && !lineTotalUpdated) {
-         console.log('  ⚠️ Could not find price matching', priceData.original , 'in row via traversal. Trying broad search...');
-         // Broad fallback: search all descendants
-         row.querySelectorAll('*').forEach(checkAndReplace);
+         console.log('  ⚠️ Could not find price matching', priceData.original , 'in row via traversal');
     }
   }
-
-  window.metoraDebugCart = function() {
-      console.log('🔍 Cart Debug:', {
-          customerId: window.SHOPIFY_CUSTOMER_ID || customerId,
-          pricesCount: Object.keys(window.metoraCustomPrices).length,
-          updateInProgress: window.metoraUpdateInProgress
-      });
-      // Find all rows
-      const rows = document.querySelectorAll('tr, .cart-item, [class*="cart-item"]');
-      console.log(`Found ${rows.length} potential cart rows`);
-      
-      rows.forEach((row, i) => {
-          const isItemRow = row.innerHTML.match(/\d{10,}/); // Simple regex for potential IDs
-          if (isItemRow) {
-              const updated = row.querySelectorAll('.metora-updated').length;
-              const hidden = row.querySelectorAll('[style*="visibility: hidden"]').length;
-              console.log(`Row[${i}]:`, {
-                  element: row,
-                  has_id: isItemRow[0],
-                  updated_elements: updated,
-                  hidden_elements: hidden
-              });
-          }
-      });
-  };
 
   // **NEW: Global set to track updated elements permanently**
   window.metoraUpdatedElements = window.metoraUpdatedElements || new Set();
@@ -972,12 +819,14 @@ function updateCartTotalDisplay(newTotal, oldTotal, shopifyOriginalTotal) {
     
     const finalTotal = hasLoyaltyDiscount ? Math.max(0, newTotal - loyaltyDiscount) : newTotal;
     
-    console.log('  📊 Shopify original: ' + symbol + shopifyOriginalTotal);
-    console.log('  📊 Custom price total: ' + symbol + newTotal);
+    console.log('  📊 Shopify original: ₹' + shopifyOriginalTotal);
+    console.log('  📊 Custom price total: ₹' + newTotal);
     if (hasLoyaltyDiscount) {
-        console.log('  🎫 Loyalty discount: -' + symbol + loyaltyDiscount);
+        console.log('  🎫 Loyalty discount: -₹' + loyaltyDiscount);
     }
-    console.log('  📊 Final total: ' + symbol + finalTotal);
+    console.log('  📊 Final total: ₹' + finalTotal);
+    
+    const symbol = getCurrencySymbol(CONFIG.currency);
     
     // **Update the text-component cart total**
     const cartTotalComponent = document.querySelector('text-component[ref="cartTotal"], text-component[data-cart-subtotal]');
@@ -1017,11 +866,7 @@ function updateCartTotalDisplay(newTotal, oldTotal, shopifyOriginalTotal) {
         if (el.closest('#metora-loyalty-widget')) continue;
         
         const text = el.textContent.trim();
-        // More robust numeric extraction: find the first sequence of digits and a decimal point
-        const numericMatch = text.match(/(\d[\d,.]*)/);
-        if (!numericMatch) continue;
-        
-        const numericText = numericMatch[0].replace(/,/g, '');
+        const numericText = text.replace(/Rs\.?|₹|,|\s/gi, '');
         const value = parseFloat(numericText);
         
         // Check if this matches the original total (with some tolerance)

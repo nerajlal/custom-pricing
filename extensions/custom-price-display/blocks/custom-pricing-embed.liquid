@@ -25,70 +25,67 @@
     const shop = "{{ shop.permanent_domain }}";
     const customerId = "{{ customer.id | default: '' }}";
     
-    console.log('🔗 Custom Pricing & Loyalty: App Embed Initializing (v6)...');
+    console.log('🔗 Custom Pricing & Loyalty: App Embed Initializing...');
 
     // Function to inject scripts via Proxy
     function injectScript(proxyPath, filename, id) {
       if (document.getElementById(id)) return;
       
+      // We'll try the common proxy path first
       const script = document.createElement('script');
       script.id = id;
       script.async = true;
       
-      // Attempt 1: Direct Proxy Path
-      const primarySrc = proxyPath + '/' + filename + '?shop=' + shop + (customerId ? '&logged_in_customer_id=' + customerId : '');
-      script.src = primarySrc;
+      // Try with /app-proxy/ prefix if it's not already in the proxyPath
+      let src = proxyPath;
+      if (!src.endsWith('/app-proxy')) {
+          src += '/app-proxy';
+      }
+      script.src = src + '/' + filename + '?shop=' + shop + (customerId ? '&logged_in_customer_id=' + customerId : '');
       
       script.onload = function() {
         console.log('✅ Loaded: ' + filename + ' via Proxy');
       };
       
       script.onerror = function() {
-        if (!window.metoraFallbackTriggered) {
-          window.metoraFallbackTriggered = true;
-          console.warn('⚠️ Proxy path failed. Switching to redundant loading...');
-        }
-        const fallbackSrc = "https://custompricing.task19.com/app-proxy/" + filename + "?shop=" + shop + (customerId ? "&logged_in_customer_id=" + customerId : "");
-        const fallbackScript = document.createElement('script');
-        fallbackScript.src = fallbackSrc;
-        fallbackScript.id = id + '-fallback';
-        document.head.appendChild(fallbackScript);
+        console.warn('⚠️ Failed to load ' + filename + ' via ' + src + '. Trying direct path...');
+        
+        // Try direct path (without the extra /app-proxy if it failed above)
+        const secondarySrc = proxyPath + '/' + filename + '?shop=' + shop + (customerId ? '&logged_in_customer_id=' + customerId : '');
+        const secondaryScript = document.createElement('script');
+        secondaryScript.src = secondarySrc;
+        secondaryScript.id = id + '-retry';
+        
+        secondaryScript.onload = function() {
+            console.log('✅ Loaded: ' + filename + ' via secondary proxy path');
+        };
+        
+        secondaryScript.onerror = function() {
+            console.warn('❌ Proxy failed completely for ' + filename + '. Using fallback.');
+            const fallbackScript = document.createElement('script');
+            fallbackScript.src = "https://custompricing.task19.com/app-proxy/" + filename + "?shop=" + shop + (customerId ? "&logged_in_customer_id=" + customerId : "");
+            document.head.appendChild(fallbackScript);
+        };
+        
+        document.head.appendChild(secondaryScript);
       };
 
       document.head.appendChild(script);
     }
 
-    // Expanded list of likely proxy paths and prefixes
-    const proxyPaths = [
-      '/apps/custom-pricing', '/apps/pricing', '/apps/custompicker', '/apps/pricing-app',
-      '/a/custom-pricing', '/a/pricing', '/tools/custom-pricing', '/community/custom-pricing'
-    ];
+    // Attempt to detect the correct proxy path (Shared logic from existing scripts)
+    // Shopify usually uses one of these defaults if not customized
+    const proxyPaths = ['/apps/custom-pricing', '/apps/pricing', '/apps/custompicker'];
     
-    // Discovery: we'll try to find which proxy is working
-    async function discoverProxy() {
-      for (const path of proxyPaths) {
-        try {
-          const res = await fetch(path + '/ping?shop=' + shop);
-          if (res.ok) {
-             console.log('📍 Detected working Proxy path:', path);
-             return path;
-          }
-        } catch(e) {}
-      }
-      return null;
-    }
+    // We'll try the first one and let the script's internal logic handle retries if needed, 
+    // or just assume the most likely one based on the app name.
+    const defaultProxyPath = '/apps/custom-pricing'; 
 
-    async function init() {
-      const workingPath = await discoverProxy() || proxyPaths[0];
-      
-      // Inject scripts
-      injectScript(workingPath, 'script.js', 'metora-pricing-script');
-      injectScript(workingPath, 'cart-script.js', 'metora-cart-script');
-      injectScript(workingPath, 'loyalty-widget.js', 'metora-loyalty-widget');
-      injectScript(workingPath, 'loyalty-cart.js', 'metora-loyalty-cart');
-    }
-
-    init();
+    // Inject the unified custom pricing script
+    injectScript(defaultProxyPath, 'script.js', 'metora-pricing-script');
+    
+    // Inject the loyalty widget script
+    injectScript(defaultProxyPath, 'loyalty-widget.js', 'metora-loyalty-widget');
 
   })();
 </script>

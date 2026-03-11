@@ -1,11 +1,9 @@
 (function() {
     'use strict';
     
-    if (window.metoraLoyaltyWidgetInitialized) return;
-    window.metoraLoyaltyWidgetInitialized = true;
-    
     console.log('🎯 Loyalty Widget Script Loaded');
     
+    // Wait for page to be fully loaded
     function initLoyaltyWidget() {
         console.log('🎯 Initializing Loyalty Widget...');
     
