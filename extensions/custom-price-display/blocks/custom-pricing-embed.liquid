@@ -44,9 +44,13 @@
       };
       
       script.onerror = function() {
-        console.warn('⚠️ Proxy path failed for ' + filename + '. Using direct fallback...');
+        if (!window.metoraFallbackTriggered) {
+          window.metoraFallbackTriggered = true;
+          console.warn('⚠️ Proxy path failed. Switching to redundant loading...');
+        }
+        const fallbackSrc = "https://custompricing.task19.com/app-proxy/" + filename + "?shop=" + shop + (customerId ? "&logged_in_customer_id=" + customerId : "");
         const fallbackScript = document.createElement('script');
-        fallbackScript.src = "https://custompricing.task19.com/app-proxy/" + filename + "?shop=" + shop + (customerId ? "&logged_in_customer_id=" + customerId : "");
+        fallbackScript.src = fallbackSrc;
         fallbackScript.id = id + '-fallback';
         document.head.appendChild(fallbackScript);
       };
@@ -54,8 +58,11 @@
       document.head.appendChild(script);
     }
 
-    // List of likely proxy paths
-    const proxyPaths = ['/apps/custom-pricing', '/apps/pricing', '/apps/custompicker', '/apps/pricing-app'];
+    // Expanded list of likely proxy paths and prefixes
+    const proxyPaths = [
+      '/apps/custom-pricing', '/apps/pricing', '/apps/custompicker', '/apps/pricing-app',
+      '/a/custom-pricing', '/a/pricing', '/tools/custom-pricing', '/community/custom-pricing'
+    ];
     
     // Discovery: we'll try to find which proxy is working
     async function discoverProxy() {

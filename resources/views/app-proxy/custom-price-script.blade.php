@@ -97,16 +97,20 @@
           .price__container,
           .price__regular,
           .price-item,
-          .money,
-          .cart-item .price, 
-          .cart__price, 
-          [data-cart-item-price],
-          .cart__subtotal,
-          .totals__subtotal-value,
-          .line-item-price { 
-              opacity: 0 !important; 
-              visibility: hidden !important; 
-          }
+       /* ONLY hide prices in main areas to prevent global break */
+       .product__info-container .price,
+       .product-single__meta .price,
+       .product__info-container .money,
+       .product-single__meta .money,
+       .cart-items .price,
+       .cart-items .money,
+       .cart-drawer .price,
+       .cart-drawer .money,
+       #CartDrawer .price,
+       #CartDrawer .money { 
+           opacity: 0 !important; 
+           visibility: hidden !important; 
+       }
       `;
       document.head.appendChild(hideStyle);
       console.log('🙈 Prices temporarily hidden to prevent flash (Sync)');
@@ -227,18 +231,19 @@
       color: white !important;
       padding: 12px 16px !important;
       border-radius: 8px !important;
-      margin: 10px 0 !important;
-      box-shadow: 0 4px 10px rgba(16,185,129,0.2) !important;
+      margin: 12px 0 !important;
+      box-shadow: 0 4px 10px rgba(16,185,129,0.15) !important;
       display: none;
       visibility: visible !important;
       opacity: 1 !important;
       position: relative !important;
-      z-index: 10 !important;
+      z-index: 1 !important;
       width: fit-content !important;
       min-width: 200px !important;
       max-width: 100% !important;
       border: 1px solid #047857 !important;
       line-height: 1.4 !important;
+      clear: both !important;
     }
     .metora-custom-price-container.active {
       display: block !important;
@@ -390,8 +395,9 @@
         else if (point.closest('cart-drawer')) reason = 'cart-drawer-tag';
         else if (point.closest('.cart-notification') || point.closest('cart-notification')) reason = 'cart-notification';
         else if (point.closest('.cart-items')) reason = 'cart-items';
-        else if (point.closest('.related-products')) reason = 'related-products';
-        else if (point.closest('.product-recommendations')) reason = 'recommendations';
+        else if (point.closest('.related-products, .product-recommendations, #related-products')) reason = 'recommendations';
+        else if (point.closest('header, .header, .announcement-bar, .top-bar, nav')) reason = 'header-area';
+        else if (point.closest('footer, .footer')) reason = 'footer-area';
         
         const mainContainer = point.closest('.product__info-container, .product-single__meta, .main-product, #ProductSection');
         const form = point.closest('form[action*="/cart/add"]');
@@ -410,10 +416,15 @@
     // Fallback if no specific price points found
     if (validPoints.length === 0) {
         console.log('⚠️ No primary price points found, trying fallbacks...');
-        const mainContainer = document.querySelector('.product__info-container, .product-single__meta, .main-product, #ProductSection');
+        const mainContainer = document.querySelector('.product__info-container, .product-single__meta, .main-product, #ProductSection, .product-view');
         
+        if (!mainContainer) {
+            console.log('❌ No main product container found, aborting PDP injection to prevent top-of-body injection.');
+            return;
+        }
+
         // Try to find the price inside the product form specifically
-        const formPrice = (mainContainer || document).querySelector('form[action*="/cart/add"] .price, form[action*="/cart/add"] [data-price]');
+        const formPrice = mainContainer.querySelector('form[action*="/cart/add"] .price, form[action*="/cart/add"] [data-price]');
         
         if (formPrice && !formPrice.closest('.metora-custom-price-container')) {
             validPoints.push(formPrice);
@@ -791,15 +802,16 @@
 
     // Filter out cards that are actually part of the main PDP or header/navigation
     return Array.from(allCards).filter(card => {
-        const isHeader = !!card.closest('header, .header, .sticky-header, #header, nav, .navigation');
+        const isHeader = !!card.closest('header, .header, .sticky-header, #header, nav, .navigation, .announcement-bar, .top-bar');
         const isMainInfo = !!card.closest('.product__info-container, .product-single__meta, .product-info-main, #ProductSection, .product-view, .product__info-wrapper, .product-single, .product-main, .main-product-wrapper');
         const isModal = !!card.closest('.modal, .quick-view, .product-quickview, .cart-drawer, cart-drawer, #CartDrawer');
         const isFooter = !!card.closest('footer, .footer');
+        const isBreadcrumb = !!card.closest('.breadcrumb, .breadcrumbs');
         
         // Anti-recursion: if card contains the mainPDP info container, it's NOT a card
         if (card.querySelector('.product__info-container, .product-single__meta')) return false;
 
-        return !isHeader && !isMainInfo && !isModal && !isFooter;
+        return !isHeader && !isMainInfo && !isModal && !isFooter && !isBreadcrumb;
     });
   }
 
