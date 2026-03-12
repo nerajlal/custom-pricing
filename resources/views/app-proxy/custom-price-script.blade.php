@@ -631,6 +631,8 @@
   function initGridPricing() {
       const productCards = findProductCards();
       
+      console.log('🔍 Found ' + productCards.length + ' potential product cards to process');
+      
       productCards.forEach(function(card, index) {
         // Self-Healing: If processed but container missing (Theme Wipe), reset.
         if (card.getAttribute('data-metora-processed')) {
@@ -651,10 +653,10 @@
            setTimeout(function() {
               const hide = document.getElementById('metora-initial-hide');
               if (hide) {
-                  console.log('🔓 Safe unhide triggered');
+                  console.log('🔓 Safe unhide triggered (Grid)');
                   hide.remove();
               }
-          }, 1000); 
+          }, 1500); 
       }
   }
 
@@ -663,14 +665,18 @@
     let variantId = getVariantIdFromCard(card);
     
     if (variantId) {
+      console.log('  🏷️ Found variant ID ' + variantId + ' for card ' + index);
       await checkAndDisplayCustomPriceOnCard(card, variantId);
     } else {
+      console.log('  🕵️ Variant ID not found on card ' + index + ', trying handle-based discovery...');
       const productId = card.getAttribute('data-product-id');
-      if (productId) {
-        variantId = await getFirstVariantFromProduct(card, productId);
-        if (variantId) {
-          await checkAndDisplayCustomPriceOnCard(card, variantId);
-        }
+      // Even if productId is missing, try to find a variant by handle
+      variantId = await getFirstVariantFromProduct(card, productId);
+      if (variantId) {
+        console.log('  🏷️ Discovered variant ID ' + variantId + ' via handle for card ' + index);
+        await checkAndDisplayCustomPriceOnCard(card, variantId);
+      } else {
+        console.warn('  ❌ Could not discover variant for card ' + index);
       }
     }
   }
@@ -713,7 +719,10 @@
   function findProductCards() {
     let cards = [];
     
+    // Modern & Legacy Selectors
     const selectors = [
+      '.card-wrapper', // Dawn/Modern
+      '.card',
       '.product-card',
       '.product-item',
       '.grid__item',
@@ -722,25 +731,33 @@
       '.product',
       '.collection-product-card',
       'li[class*="product"]',
-      'div[class*="product-card"]'
+      'div[class*="product-card"]',
+      '.product-card-wrapper'
     ];
 
-    for (let i = 0; i < selectors.length; i++) {
-      let found = document.querySelectorAll(selectors[i]);
-      if (found.length > 0) {
-        cards = found;
-        break;
-      }
-    }
+    selectors.forEach(selector => {
+      const foundElements = document.querySelectorAll(selector);
+      foundElements.forEach(el => {
+          // Optimization: A valid card MUST contain a link to a product
+          // and a price element of some sort
+          if (el.querySelector('a[href*="/products/"]') && !cards.includes(el)) {
+              cards.push(el);
+          }
+      });
+    });
 
     if (cards.length === 0) {
+      console.log('  ⚠️ No specific card selectors matched, trying link-based discovery...');
       const productLinks = document.querySelectorAll('a[href*="/products/"]');
       const parentCards = [];
       productLinks.forEach(function(link) {
+        // Skip links that are likely just tiny icons/thumbnails or inside our own container
+        if (link.closest('.metora-custom-price-container')) return;
+        
         let parent = link.parentElement;
         let depth = 0;
-        while (parent && depth < 5) {
-          if (parent.querySelector('.price, [data-price]')) {
+        while (parent && depth < 6) {
+          if (parent.querySelector('.price, [data-price], .money, .price__regular')) {
             if (parentCards.indexOf(parent) === -1) parentCards.push(parent);
             break;
           }
@@ -758,6 +775,9 @@
     let element = card.querySelector('[data-variant-id]');
     if (element) return element.getAttribute('data-variant-id');
 
+    element = card.querySelector('[data-id]');
+    if (element && /^\d+$/.test(element.getAttribute('data-id'))) return element.getAttribute('data-id');
+
     element = card.querySelector('input[name="id"], select[name="id"]');
     if (element && element.value) return element.value;
 
@@ -766,13 +786,24 @@
       const match = element.href.match(/variant=(\d+)/);
       if (match) return match[1];
     }
+    
+    // Check for variant ID in the card's data attributes
+    for (let i = 0; i < card.attributes.length; i++) {
+        const attr = card.attributes[i];
+        if (attr.name.includes('variant') && /^\d{10,}$/.test(attr.value)) {
+            return attr.value;
+        }
+    }
 
     const scripts = card.querySelectorAll('script[type="application/json"]');
     for (let i = 0; i < scripts.length; i++) {
       try {
         const data = JSON.parse(scripts[i].textContent);
         if (data.variants && data.variants[0] && data.variants[0].id) {
-          return data.variants[0].id;
+          return data.variants[0].id.toString();
+        }
+        if (data.id && /^\d{10,}$/.test(data.id.toString())) {
+            return data.id.toString();
         }
       } catch (e) {}
     }
@@ -833,7 +864,24 @@
   function displayCustomPriceOnCard(card, data) {
     const currencySymbol = getCurrencySymbol(CONFIG.currency);
     const discount = Math.round(((data.original_price - data.custom_price) / data.original_price) * 100);
-    const priceElements = card.querySelectorAll('.price, .product-price, [data-price], .price__regular, .price-item, .money, [class*="price"]');
+    
+    // Aggressive price element detection for Grid
+    const priceSelectors = [
+        '.price', 
+        '.product-price', 
+        '[data-price]', 
+        '.price__regular', 
+        '.price-item', 
+        '.money', 
+        '[class*="price"]',
+        '.price__container',
+        '.price__last'
+    ];
+    const priceElements = card.querySelectorAll(priceSelectors.join(', '));
+    
+    if (priceElements.length === 0) {
+        console.warn('  ⚠️ No price elements found inside card', card);
+    }
     
     priceElements.forEach(function(priceEl) {
       if (priceEl.classList.contains('metora-processed')) return;
