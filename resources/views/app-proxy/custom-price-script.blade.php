@@ -142,10 +142,6 @@
     shop: window.Shopify.shop,
     currency: window.Shopify.currency.active
   };
-
-  // Caches to prevent redundant requests
-  window.metoraDiscoveryCache = window.metoraDiscoveryCache || {};
-  window.metoraProcessedHandles = window.metoraProcessedHandles || {};
   
   const CONFIG = window.metoraConfig;
   window.metoraCustomPrices = window.metoraCustomPrices || {};
@@ -716,8 +712,8 @@
   }
 
   // Define Grid Helper Functions in shared scope
+  async function processCard(card, variantId) {
     if (card.getAttribute('data-metora-processed') && card.querySelector('.metora-custom-price-container')) return;
-    if (card.getAttribute('data-metora-failed')) return;
     
     if (!variantId) {
         variantId = getVariantIdFromCard(card);
@@ -728,38 +724,15 @@
       card.setAttribute('data-metora-processed', 'true');
       displayPriceFromCacheOrFetch(card, variantId);
     } else {
-      const productLink = card.querySelector('a[href*="/products/"]');
-      if (!productLink) {
-          card.setAttribute('data-metora-failed', 'true');
-          return;
-      }
-      
-      const match = productLink.href.match(/\/products\/([^?#/]+)/);
-      if (!match) {
-          card.setAttribute('data-metora-failed', 'true');
-          return;
-      }
-      const productHandle = match[1];
-
-      // Check cache first
-      if (window.metoraDiscoveryCache[productHandle]) {
-          variantId = window.metoraDiscoveryCache[productHandle];
-          console.log('  🏷️ [Grid] Using cached variant ID for:', productHandle);
-          card.setAttribute('data-metora-processed', 'true');
-          displayPriceFromCacheOrFetch(card, variantId);
-          return;
-      }
-
-      console.log('  🕵️ [Grid] No immediate variant ID, attempting async discovery for:', productHandle);
-      variantId = await getFirstVariantFromProduct(card, null, productHandle);
+      const productId = card.getAttribute('data-product-id');
+      console.log('  🕵️ [Grid] No immediate variant ID, attempting async discovery...');
+      variantId = await getFirstVariantFromProduct(card, productId);
       if (variantId) {
-          window.metoraDiscoveryCache[productHandle] = variantId;
           console.log('  🏷️ [Grid] Discovered variant ID via AJAX:', variantId);
           card.setAttribute('data-metora-processed', 'true');
           displayPriceFromCacheOrFetch(card, variantId);
       } else {
-          console.warn('  ❌ [Grid] Failed to find variant ID for card', productHandle);
-          card.setAttribute('data-metora-failed', 'true');
+          console.warn('  ❌ [Grid] Failed to find variant ID for card', card);
       }
     }
   }
@@ -787,22 +760,20 @@
       }
   }
 
-  async function getFirstVariantFromProduct(card, productId, handle = null) {
-    let productHandle = handle;
-    if (!productHandle) {
-        const productLink = card.querySelector('a[href*="/products/"]');
-        if (!productLink) return null;
-        const match = productLink.href.match(/\/products\/([^?#/]+)/);
-        if (!match) return null;
-        productHandle = match[1];
-    }
+  async function getFirstVariantFromProduct(card, productId) {
+    const productLink = card.querySelector('a[href*="/products/"]');
+    if (!productLink) return null;
+
+    const match = productLink.href.match(/\/products\/([^?#/]+)/);
+    if (!match) return null;
+
+    const productHandle = match[1];
 
     try {
       const urls = [
         '/products/' + productHandle + '.js',
         window.location.origin + '/products/' + productHandle + '.js'
       ];
-// ... rest of logic
 
       for (let url of urls) {
         try {
@@ -993,7 +964,7 @@
 
   // Run Grid Pricing site-wide
   setTimeout(initGridPricing, 100);
-  setInterval(initGridPricing, 15000); // 15s interval (MutationObserver is main driver)
+  setInterval(initGridPricing, 5000); // Slower interval since observer is active
   console.log('✨ Universal grid pricing initialized (MutationObserver Active)');
 
 
