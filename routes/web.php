@@ -155,27 +155,41 @@ Route::get('/loyalty-cart.js', function() {
 })->name('mirror.cart');
 
 // 2. Double-proxy mirrors (Handles /apps/custom-pricing/app-proxy/script.js)
-Route::get('/app-proxy/script.js', function(Request $request) {
+Route::match(['get', 'post'], '/app-proxy/script.js', function(Request $request) {
     $customerId = $request->query('logged_in_customer_id') ?? $request->query('customer_id');
     $jsContent = view('app-proxy.custom-price-script', ['customerId' => $customerId])->render();
     return response($jsContent)->header('Content-Type', 'application/javascript; charset=utf-8')->header('Access-Control-Allow-Origin', '*');
 });
 
-Route::get('/app-proxy/loyalty-widget.js', function() {
+Route::match(['get', 'post'], '/app-proxy/loyalty-widget.js', function() {
     $jsContent = view('app-proxy.loyalty-widget-script')->render();
     return response($jsContent)->header('Content-Type', 'application/javascript; charset=utf-8')->header('Access-Control-Allow-Origin', '*');
 });
 
-// 3. Nested proxy mirrors (Handles common misconfigurations)
+Route::match(['get', 'post'], '/app-proxy/loyalty-cart.js', function() {
+    $jsContent = view('app-proxy.loyalty-cart-script')->render();
+    return response($jsContent)->header('Content-Type', 'application/javascript; charset=utf-8')->header('Access-Control-Allow-Origin', '*');
+});
+
+Route::match(['get', 'post'], '/app-proxy/cart-script.js', function() {
+    $jsContent = view('app-proxy.cart-custom-price-script')->render();
+    return response($jsContent)->header('Content-Type', 'application/javascript; charset=utf-8')->header('Access-Control-Allow-Origin', '*');
+});
+
+// 3. Nested proxy mirrors (Handles /apps/custom-pricing/app-proxy/app-proxy/script.js)
 Route::match(['get', 'post'], '/app-proxy/app-proxy/{filename}', function(Request $request, $filename) {
     $customerId = $request->query('logged_in_customer_id') ?? $request->query('customer_id');
     
-    if ($filename === 'script.js') {
-        return response(view('app-proxy.custom-price-script', ['customerId' => $customerId])->render())->header('Content-Type', 'application/javascript');
+    $view = null;
+    if ($filename === 'script.js') $view = view('app-proxy.custom-price-script', ['customerId' => $customerId]);
+    if ($filename === 'loyalty-widget.js') $view = view('app-proxy.loyalty-widget-script');
+    if ($filename === 'loyalty-cart.js') $view = view('app-proxy.loyalty-cart-script');
+    if ($filename === 'cart-script.js') $view = view('app-proxy.cart-custom-price-script');
+    
+    if ($view) {
+        return response($view->render())->header('Content-Type', 'application/javascript; charset=utf-8')->header('Access-Control-Allow-Origin', '*');
     }
-    if ($filename === 'loyalty-widget.js') {
-        return response(view('app-proxy.loyalty-widget-script')->render())->header('Content-Type', 'application/javascript');
-    }
+    
     return response('Not found', 404);
 });
 

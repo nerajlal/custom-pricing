@@ -21,73 +21,73 @@
   (function() {
     'use strict';
     
-    // Shopify context
     const shop = "{{ shop.permanent_domain }}";
     const customerId = "{{ customer.id | default: '' }}";
     
-    console.log('🔗 Custom Pricing & Loyalty: App Embed Initializing...');
+    // Silence console logging for initialization unless manually debugging
+    const log = (msg, isError) => {
+        if (isError) console.warn('🔗 Metora: ' + msg);
+        else if (window.location.search.includes('metora_debug')) console.log('🔗 Metora: ' + msg);
+    };
 
-    // Function to inject scripts via Proxy
-    function injectScript(proxyPath, filename, id) {
+    log('App Embed Initializing...');
+
+    function injectScript(filename, id) {
       if (document.getElementById(id)) return;
       
-      // Prioritize the path that actually maps in Laravel
+      const storageKey = 'metora_proxy_path_' + filename;
+      const cachedPath = localStorage.getItem(storageKey);
+      
+      // Paths to try in order of likelihood
       const pathsToTry = [
-          proxyPath + '/' + filename,             // 1. /apps/custom-pricing/script.js (MOST LIKELY)
-          '/apps/custom-pricing/' + filename,      // 2. /apps/custom-pricing/script.js (Absolute)
-          proxyPath + '/app-proxy/' + filename     // 3. Fallback for nested mapping
-      ];
+          cachedPath,                                // 0. Previously worked (if any)
+          '/apps/custom-pricing/' + filename,        // 1. Standard Proxy
+          '/apps/custom-pricing/app-proxy/' + filename,// 2. Nested Proxy
+          '/script.js' === filename ? '/script.js' : null, // 3. Root mirror (if script.js)
+          'https://custompricing.task19.com/app-proxy/' + filename // 4. Direct Fallback
+      ].filter(Boolean);
       
       let attempt = 0;
       
-      function tryNextPath() {
-          if (attempt >= pathsToTry.length) {
-              // Direct fallback to server
-              const fallbackScript = document.createElement('script');
-              fallbackScript.id = id;
-              fallbackScript.src = "https://custompricing.task19.com/app-proxy/" + filename + "?shop=" + shop + (customerId ? "&logged_in_customer_id=" + customerId : "");
-              document.head.appendChild(fallbackScript);
-              return;
-          }
+      function tryNext() {
+          if (attempt >= pathsToTry.length) return;
           
-          const currentPath = pathsToTry[attempt];
+          let path = pathsToTry[attempt];
+          const isFallback = path.startsWith('http');
+          
+          // Append required query params
+          const separator = path.includes('?') ? '&' : '?';
+          const src = path + separator + 'shop=' + shop + (customerId ? '&logged_in_customer_id=' + customerId : '');
+          
           const script = document.createElement('script');
-          script.id = id + '-' + attempt;
           script.async = true;
-          script.src = currentPath + '?shop=' + shop + (customerId ? '&logged_in_customer_id=' + customerId : '');
+          script.src = src;
           
           script.onload = function() {
-              // Clean up any failed scripts from this attempt
-              for(let i=0; i<attempt; i++) {
-                  let old = document.getElementById(id + '-' + i);
-                  if(old) old.remove();
+              if (!isFallback) {
+                  localStorage.setItem(storageKey, path);
+                  log('Successfully loaded ' + filename + ' via ' + path);
               }
           };
           
           script.onerror = function() {
+              // Be silent on failures unless it's the very last fallback
+              if (attempt === pathsToTry.length - 1) {
+                  log('Failed to load ' + filename + ' even via fallback', true);
+              }
               attempt++;
-              tryNextPath();
+              tryNext();
           };
           
           document.head.appendChild(script);
       }
       
-      tryNextPath();
+      tryNext();
     }
 
-    // Attempt to detect the correct proxy path (Shared logic from existing scripts)
-    // Shopify usually uses one of these defaults if not customized
-    const proxyPaths = ['/apps/custom-pricing', '/apps/pricing', '/apps/custompicker'];
-    
-    // We'll try the first one and let the script's internal logic handle retries if needed, 
-    // or just assume the most likely one based on the app name.
-    const defaultProxyPath = '/apps/custom-pricing'; 
-
-    // Inject the unified custom pricing script
-    injectScript(defaultProxyPath, 'script.js', 'metora-pricing-script');
-    
-    // Inject the loyalty widget script
-    injectScript(defaultProxyPath, 'loyalty-widget.js', 'metora-loyalty-widget');
+    // Inject scripts
+    injectScript('script.js', 'metora-pricing-script');
+    injectScript('loyalty-widget.js', 'metora-loyalty-widget');
 
   })();
 </script>
