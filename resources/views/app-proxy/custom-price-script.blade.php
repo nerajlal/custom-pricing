@@ -632,12 +632,14 @@
   // Runs on ALL pages except Cart
   function initGridPricing() {
       const productCards = findProductCards();
+      console.log('🔍 [Grid] Found ' + productCards.length + ' potential product cards');
+      
       const cardsToProcess = [];
       const variantIdsToFetch = [];
       
       productCards.forEach(function(card, index) {
-        // Self-Healing
-        if (card.getAttribute('data-metora-processed')) {
+          // Self-Healing
+          if (card.getAttribute('data-metora-processed')) {
             if (!card.querySelector('.metora-custom-price-container')) {
                 card.removeAttribute('data-metora-processed');
             } else {
@@ -713,19 +715,24 @@
   async function processCard(card, variantId) {
     if (card.getAttribute('data-metora-processed') && card.querySelector('.metora-custom-price-container')) return;
     
-    if (!variantId) variantId = getVariantIdFromCard(card);
+    if (!variantId) {
+        variantId = getVariantIdFromCard(card);
+        if (variantId) console.log('  🏷️ [Grid] Found variant ID on card:', variantId);
+    }
 
     if (variantId) {
       card.setAttribute('data-metora-processed', 'true');
       displayPriceFromCacheOrFetch(card, variantId);
     } else {
       const productId = card.getAttribute('data-product-id');
-      if (productId) {
-        variantId = await getFirstVariantFromProduct(card, productId);
-        if (variantId) {
+      console.log('  🕵️ [Grid] No immediate variant ID, attempting async discovery...');
+      variantId = await getFirstVariantFromProduct(card, productId);
+      if (variantId) {
+          console.log('  🏷️ [Grid] Discovered variant ID via AJAX:', variantId);
           card.setAttribute('data-metora-processed', 'true');
           displayPriceFromCacheOrFetch(card, variantId);
-        }
+      } else {
+          console.warn('  ❌ [Grid] Failed to find variant ID for card', card);
       }
     }
   }
@@ -795,6 +802,9 @@
       '.product-card',
       '.product-item',
       '.grid__item',
+      '.card-wrapper',
+      '.card',
+      'article[class*="product"]',
       '[data-product-id]',
       '.product-grid-item',
       '.product',
@@ -803,13 +813,19 @@
       'div[class*="product-card"]'
     ];
 
-    for (let i = 0; i < selectors.length; i++) {
-      let found = document.querySelectorAll(selectors[i]);
-      if (found.length > 0) {
-        cards = found;
-        break;
-      }
-    }
+    const foundElements = new Set();
+    selectors.forEach(selector => {
+      document.querySelectorAll(selector).forEach(el => {
+        // Ensure it's not a tiny element and contains a price or link to product
+        if (el.offsetWidth > 10 || el.offsetHeight > 10) {
+           if (el.querySelector('a[href*="/products/"]') || el.querySelector('.price, [class*="price"]')) {
+             foundElements.add(el);
+           }
+        }
+      });
+    });
+    
+    cards = Array.from(foundElements);
 
     if (cards.length === 0) {
       const productLinks = document.querySelectorAll('a[href*="/products/"]');
@@ -890,7 +906,7 @@
 
   function displaySilentPriceOnCard(card, data) {
        const currencySymbol = getCurrencySymbol(CONFIG.currency);
-       const priceElements = card.querySelectorAll('.price, .product-price, [data-price], .price__regular, .price-item, .money, [class*="price"]');
+       const priceElements = card.querySelectorAll('.price, .product-price, [data-price], .price__regular, .price-item, .money, [class*="price"], .card__price');
        
        priceElements.forEach(function(priceEl) {
           if (priceEl.classList.contains('metora-processed')) return;
@@ -898,33 +914,39 @@
           if (priceEl.previousElementSibling && priceEl.previousElementSibling.classList.contains('metora-custom-price-container')) return;
 
           priceEl.classList.add('metora-processed');
-          priceEl.style.display = 'none';
+          priceEl.style.setProperty('display', 'none', 'important');
+          priceEl.style.setProperty('visibility', 'hidden', 'important');
+          priceEl.style.setProperty('opacity', '0', 'important');
 
-          const container = document.createElement('div');
-          container.className = 'metora-custom-price-container silent-mode active';
-          container.textContent = currencySymbol + parseFloat(data.custom_price).toFixed(2);
-          
-          priceEl.parentElement.insertBefore(container, priceEl);
+          if (!card.querySelector('.metora-custom-price-container')) {
+              const container = document.createElement('div');
+              container.className = 'metora-custom-price-container silent-mode active';
+              container.textContent = currencySymbol + parseFloat(data.custom_price).toFixed(2);
+              priceEl.parentElement.insertBefore(container, priceEl);
+          }
        });
   }
 
   function displayCustomPriceOnCard(card, data) {
     const currencySymbol = getCurrencySymbol(CONFIG.currency);
     const discount = Math.round(((data.original_price - data.custom_price) / data.original_price) * 100);
-    const priceElements = card.querySelectorAll('.price, .product-price, [data-price], .price__regular, .price-item, .money, [class*="price"]');
+    const priceElements = card.querySelectorAll('.price, .product-price, [data-price], .price__regular, .price-item, .money, [class*="price"], .card__price');
     
     priceElements.forEach(function(priceEl) {
       if (priceEl.classList.contains('metora-processed')) return;
       if (priceEl.closest('.metora-custom-price-container')) return;
 
       priceEl.classList.add('metora-processed');
-      priceEl.style.display = 'none';
+      priceEl.style.setProperty('display', 'none', 'important');
+      priceEl.style.setProperty('visibility', 'hidden', 'important');
+      priceEl.style.setProperty('opacity', '0', 'important');
 
-      const container = document.createElement('div');
-      container.className = 'metora-custom-price-container active';
-      container.innerHTML = '<div class="custom-price-header">✨ Your Special Price</div><div class="custom-price-main"><span class="custom-price-value">' + currencySymbol + parseFloat(data.custom_price).toFixed(2) + '</span><span class="custom-price-original">' + currencySymbol + parseFloat(data.original_price).toFixed(2) + '</span><span class="custom-price-badge">' + discount + '% OFF</span></div>';
-
-      priceEl.parentElement.insertBefore(container, priceEl);
+      if (!card.querySelector('.metora-custom-price-container')) {
+          const container = document.createElement('div');
+          container.className = 'metora-custom-price-container active';
+          container.innerHTML = '<div class="custom-price-header">✨ Your Special Price</div><div class="custom-price-main"><span class="custom-price-value">' + currencySymbol + parseFloat(data.custom_price).toFixed(2) + '</span><span class="custom-price-original">' + currencySymbol + parseFloat(data.original_price).toFixed(2) + '</span><span class="custom-price-badge">' + discount + '% OFF</span></div>';
+          priceEl.parentElement.insertBefore(container, priceEl);
+      }
     });
   }
 
