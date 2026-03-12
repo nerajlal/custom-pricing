@@ -301,13 +301,22 @@
   if (isProductPage) {
     console.log('🛍️ Initializing Product Page Pricing...');
 
-    const variantInput = document.querySelector('input[name="id"], select[name="id"]');
-    let currentVariantId = variantInput.value || 
+    // More specific variant detection
+    const mainProductForm = document.querySelector('form[action*="/cart/add"], [data-type="add-to-cart-form"]');
+    const variantInput = (mainProductForm || document).querySelector('input[name="id"], select[name="id"]');
+    
+    let currentVariantId = null;
+    if (variantInput) {
+        currentVariantId = variantInput.value || 
                           (variantInput.options && variantInput.options[variantInput.selectedIndex] 
                             ? variantInput.options[variantInput.selectedIndex].value 
                             : null);
+    }
 
-    console.log('🏷️ Initial variant ID:', currentVariantId);
+    console.log('🏷️ Initial variant ID (PDP):', currentVariantId);
+    if (!currentVariantId) {
+        console.warn('⚠️ Could not find variant ID in main product form.');
+    }
 
 
     // Create container template
@@ -502,10 +511,12 @@
           // For now, let's keep it consistent: If we hid it for silent mode, we might want to show it for Green Box mode
           // UNLESS Green Box is meant to replace it too. 
           // Current behavior: Green Box adds to it. So we should probably restore it.
+          // On PDP, we ALWAYS want to keep the original price hidden if we have a custom price 
+          // unless the custom price is explicitly >= original (silent mode)
           let sibling = container.previousElementSibling || container.nextElementSibling;
-          if (sibling && sibling.classList.contains('metora-hidden-original')) {
-              sibling.style.display = ''; // Restore default
-              sibling.classList.remove('metora-hidden-original');
+          if (sibling && (sibling.classList.contains('price') || sibling.querySelector('.price') || sibling.tagName === 'SPAN')) {
+              sibling.style.display = 'none'; 
+              sibling.classList.add('metora-hidden-original');
           }
 
           container.innerHTML = '<div class="custom-price-header">✨ Special Price for You</div><div class="custom-price-main"><span class="custom-price-value">' + currencySymbol + parseFloat(data.custom_price).toFixed(2) + '</span><span class="custom-price-original">' + currencySymbol + parseFloat(data.original_price).toFixed(2) + '</span><span class="custom-price-badge">' + discount + '% OFF</span></div>';
@@ -741,6 +752,12 @@
           // Optimization: A valid card MUST contain a link to a product
           // and a price element of some sort
           if (el.querySelector('a[href*="/products/"]') && !cards.includes(el)) {
+              
+              // CRITICAL: Exclude major PDP containers and Cart/Drawer components
+              if (el.closest('.product__info-container, .product-single__meta, .main-product, .cart, .cart-drawer, cart-drawer, .cart-notification')) {
+                  return;
+              }
+              
               cards.push(el);
           }
       });
@@ -904,206 +921,7 @@
   console.log('✨ Universal grid pricing initialized');
 
 
-  // ============================================
-  // 3. CART PAGE
-  // ============================================
-  if (isCartPage) {
-    console.log('🛒 Initializing Cart Page Pricing...');
-
-    window.metoraCustomPrices = window.metoraCustomPrices || {};
-
-    const cartStyles = document.createElement('style');
-    cartStyles.textContent = `
-      .metora-custom-price-badge {
-        background: #dcfce7 !important;
-        border: 2px solid #10b981 !important;
-        border-radius: 8px !important;
-        padding: 8px 12px !important;
-        display: inline-block !important;
-        margin: 4px 0 !important;
-      }
-      .metora-custom-price-value {
-        font-size: 18px !important;
-        color: #10b981 !important;
-        font-weight: 700 !important;
-      }
-      .metora-original-price-strike {
-        text-decoration: line-through !important;
-        color: #9ca3af !important;
-        font-size: 14px !important;
-        margin-left: 8px !important;
-      }
-      .metora-savings-badge {
-        background: #059669 !important;
-        color: white !important;
-        padding: 2px 8px !important;
-        border-radius: 12px !important;
-        font-size: 11px !important;
-        font-weight: 700 !important;
-        margin-left: 8px !important;
-      }
-    `;
-    document.head.appendChild(cartStyles);
-
-    setTimeout(function() {
-      processCart();
-    }, 500);
-
-    async function processCart() {
-      try {
-        const response = await fetch('/cart.js');
-        const cart = await response.json();
-        
-        console.log('📦 Cart items:', cart.items.length);
-
-        for (let i = 0; i < cart.items.length; i++) {
-          const item = cart.items[i];
-          console.log('Processing item', i + 1, '- Variant:', item.variant_id);
-          await fetchAndApplyCustomPrice(item.variant_id, item);
-        }
-
-        setTimeout(function() {
-          updateAllCartDisplays();
-        }, 1000);
-
-      } catch (error) {
-        console.error('❌ Error:', error);
-      }
-    }
-
-    async function fetchAndApplyCustomPrice(variantId, cartItem) {
-      try {
-        const response = await fetch(CONFIG.apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({
-            customer_id: parseInt(customerId),
-            variant_id: parseInt(variantId),
-            shop: CONFIG.shop,
-            currency: CONFIG.currency
-          })
-        });
-
-        if (!response.ok) return;
-
-        const data = await response.json();
-
-        if (data.has_custom_price) {
-          // Check discount
-          if (parseFloat(data.custom_price) >= parseFloat(data.original_price)) {
-              // Allow logic to proceed, update UI logic elsewhere if needed
-          }
-
-          console.log('  🎉 Custom price found');
-          window.metoraCustomPrices[variantId] = {
-            original: parseFloat(data.original_price),
-            custom: parseFloat(data.custom_price),
-            quantity: cartItem.quantity
-          };
-        }
-      } catch (error) {
-        console.error('  ❌ Error:', error);
-      }
-    }
-
-    function updateAllCartDisplays() {
-      const variantIds = Object.keys(window.metoraCustomPrices);
-      
-      if (variantIds.length === 0) {
-        console.log('⚠️ No custom prices');
-        return;
-      }
-
-      console.log('🎨 Updating', variantIds.length, 'cart items');
-
-      variantIds.forEach(function(variantId) {
-        const priceData = window.metoraCustomPrices[variantId];
-        updateCartItemDisplay(variantId, priceData);
-      });
-
-      console.log('✅ Cart updated');
-    }
-
-    function updateCartItemDisplay(variantId, priceData) {
-      const symbol = getCurrencySymbol(CONFIG.currency);
-      const originalPrice = priceData.original / 100;
-      const customPrice = priceData.custom / 100;
-      const quantity = priceData.quantity;
-      const lineTotal = customPrice * quantity;
-      const originalLineTotal = originalPrice * quantity;
-
-      const cartContainers = document.querySelectorAll('.cart, .cart-items, #cart, [data-cart]');
-
-      cartContainers.forEach(function(cartContainer) {
-        const cartItems = cartContainer.querySelectorAll('tr, .cart-item, .cart__item, [class*="cart-item"]');
-
-        cartItems.forEach(function(item) {
-          const html = item.outerHTML;
-          const isThisVariant = html.includes('variant-id="' + variantId + '"') ||
-                               html.includes('data-variant-id="' + variantId + '"') ||
-                               html.includes('variant=' + variantId) ||
-                               item.getAttribute('data-variant-id') === variantId;
-
-          if (!isThisVariant) return;
-
-          console.log('  ✓ Found cart item for variant:', variantId);
-          updatePricesInElement(item, originalPrice, customPrice, lineTotal, originalLineTotal, symbol);
-        });
-      });
-    }
-
-    function updatePricesInElement(element, originalPrice, customPrice, lineTotal, originalLineTotal, symbol) {
-      const priceElements = element.querySelectorAll('.price:not(.metora-updated), .money:not(.metora-updated)');
-
-      let unitPriceUpdated = false;
-      let lineTotalUpdated = false;
-
-      priceElements.forEach(function(priceEl) {
-        const priceText = priceEl.textContent.replace(/[^\d.]/g, '');
-        const priceValue = parseFloat(priceText);
-
-        if (Math.abs(priceValue - originalPrice) < 0.01 && !unitPriceUpdated) {
-          priceEl.classList.add('metora-updated');
-          priceEl.innerHTML = createCustomPriceBadge(customPrice, originalPrice, symbol);
-          unitPriceUpdated = true;
-        }
-        else if (Math.abs(priceValue - originalLineTotal) < 0.01 && !lineTotalUpdated) {
-          priceEl.classList.add('metora-updated');
-          
-          if (lineTotal >= originalLineTotal) {
-             priceEl.innerHTML = '<span class="metora-custom-price-value" style="color: inherit !important; font-size: inherit !important;">' + symbol + lineTotal.toFixed(2) + '</span>';
-          } else {
-             priceEl.innerHTML = '<span class="metora-custom-price-value">' + symbol + lineTotal.toFixed(2) + '</span><span class="metora-original-price-strike">' + symbol + originalLineTotal.toFixed(2) + '</span>';
-          }
-          
-          lineTotalUpdated = true;
-        }
-      });
-    }
-
-    function createCustomPriceBadge(customPrice, originalPrice, symbol) {
-      const savings = originalPrice - customPrice;
-      
-      // Silent Override if no savings
-      if (savings <= 0.01) {
-          return '<span class="metora-custom-price-value" style="color: inherit !important; font-size: inherit !important;">' + symbol + customPrice.toFixed(2) + '</span>';
-      }
-
-      return '<div class="metora-custom-price-badge">' +
-             '<div style="font-size: 11px; color: #059669; font-weight: 600;">✨ Your Special Price</div>' +
-             '<div>' +
-             '<span class="metora-custom-price-value">' + symbol + customPrice.toFixed(2) + '</span>' +
-             '<span class="metora-original-price-strike">' + symbol + originalPrice.toFixed(2) + '</span>' +
-             '<span class="metora-savings-badge">Save ' + symbol + savings.toFixed(2) + '</span>' +
-             '</div>' +
-             '</div>';
-    }
-
-    console.log('✨ Cart pricing initialized');
-  }
+  // Dead cart code removed
 
   // ============================================
   // SHARED UTILITIES
