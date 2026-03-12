@@ -386,7 +386,6 @@
 
   async function fetchCustomPrice(variantId, cartItem) {
     try {
-      console.log('📡 Fetching price for variant:', variantId);
       const response = await fetch(CONFIG.apiUrl, {
         method: 'POST',
         headers: {
@@ -401,27 +400,21 @@
         })
       });
 
-      if (!response.ok) {
-        console.warn('  ❌ API failed for variant ' + variantId + ':', response.status);
-        return;
-      }
+      if (!response.ok) return;
 
       const data = await response.json();
-      console.log('  📦 API Response for ' + variantId + ':', data);
 
       if (data.has_custom_price) {
-        console.log('  🎉 Custom price found for variant:', variantId, data.custom_price);
+        console.log('  🎉 Custom price found for variant:', variantId);
         
         window.metoraCustomPrices[variantId] = {
           original: parseFloat(data.original_price),
           custom: parseFloat(data.custom_price),
           quantity: cartItem.quantity
         };
-      } else {
-        console.log('  ℹ️ No custom price for variant:', variantId);
       }
     } catch (error) {
-      console.error('  ❌ Error fetching variant ' + variantId + ':', error);
+      console.error('  ❌ Error:', error);
     }
   }
 
@@ -898,26 +891,8 @@ function updateCartTotalDisplay(newTotal, oldTotal, shopifyOriginalTotal) {
     });
     
     // **AGGRESSIVE SEARCH: Find ANY element with the cart total**
-    // Restricted to footer/total areas to avoid touching item rows
-    const totalAreaSelectors = [
-        '.cart__footer', 
-        '.totals', 
-        '#cart-subtotal', 
-        '.cart__subtotal', 
-        '.cart-drawer__footer',
-        '.drawer__footer',
-        '[class*="footer"]',
-        '[class*="subtotal"]'
-    ];
-    
-    let allElements = [];
-    totalAreaSelectors.forEach(sel => {
-        document.querySelectorAll(sel + ' *').forEach(el => {
-            if (!allElements.includes(el)) allElements.push(el);
-        });
-    });
-
-    console.log('  🔍 Searching for cart total (' + symbol + shopifyOriginalTotal + ') in ' + allElements.length + ' footer elements...');
+    const allElements = document.querySelectorAll('.cart__footer *, .totals *, #cart-subtotal, .cart__subtotal, [class*="total"], .cart-item__totals');
+    console.log('  🔍 Searching for cart total (' + symbol + shopifyOriginalTotal + ') in ' + allElements.length + ' elements...');
     
     let totalUpdatedCount = 0;
     
@@ -926,10 +901,8 @@ function updateCartTotalDisplay(newTotal, oldTotal, shopifyOriginalTotal) {
         
         if (el.hasAttribute('data-metora-total-updated')) continue;
         
-        // Skip if inside an item row (double check)
-        if (el.closest('tr, .cart-item, [role="row"], .cart-drawer__item')) continue;
-
         // **PROTECTION: Skip containers**
+        // Leaf nodes for prices usually have 0-2 children (span, money, etc.)
         if (el.children.length > 2) continue; 
         
         // Skip obvious containers by class or tag
