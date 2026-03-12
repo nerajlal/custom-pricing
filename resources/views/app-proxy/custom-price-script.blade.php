@@ -138,11 +138,13 @@
 
   window.metoraConfig = {
     apiUrl: '{{ rtrim(env("APP_URL"), "/") }}/api/storefront/custom-price',
+    batchApiUrl: '{{ rtrim(env("APP_URL"), "/") }}/api/storefront/batch-custom-price',
     shop: window.Shopify.shop,
     currency: window.Shopify.currency.active
   };
   
   const CONFIG = window.metoraConfig;
+  window.metoraCustomPrices = window.metoraCustomPrices || {};
 
   console.log('⚙️ Config:', CONFIG);
 
@@ -630,20 +632,38 @@
   // Runs on ALL pages except Cart
   function initGridPricing() {
       const productCards = findProductCards();
+      const cardsToProcess = [];
+      const variantIdsToFetch = [];
       
       productCards.forEach(function(card, index) {
-        // Self-Healing: If processed but container missing (Theme Wipe), reset.
+        // Self-Healing
         if (card.getAttribute('data-metora-processed')) {
             if (!card.querySelector('.metora-custom-price-container')) {
                 card.removeAttribute('data-metora-processed');
             } else {
-                return; // Truly processed and healthy
+                return; 
             }
         }
         
-        card.setAttribute('data-metora-processed', 'true');
-        processCard(card, index);
+        let variantId = getVariantIdFromCard(card);
+        if (variantId) {
+            cardsToProcess.push({ card, variantId });
+            if (!window.metoraCustomPrices[variantId]) {
+                variantIdsToFetch.push(parseInt(variantId));
+            }
+        } else {
+            // Cards without immediate variant ID still need processing (async discovery)
+            cardsToProcess.push({ card, variantId: null });
+        }
       });
+
+      if (variantIdsToFetch.length > 0) {
+          fetchBatchPrices(variantIdsToFetch).then(() => {
+              cardsToProcess.forEach(item => processCard(item.card, item.variantId));
+          });
+      } else {
+          cardsToProcess.forEach(item => processCard(item.card, item.variantId));
+      }
       
       // Safety: Unhide original prices after a short delay
       const initialHide = document.getElementById('metora-initial-hide');
@@ -658,21 +678,79 @@
       }
   }
 
+  async function fetchBatchPrices(variantIds) {
+      if (!variantIds || variantIds.length === 0) return;
+      
+      console.log('📦 Fetching batch prices for', variantIds.length, 'variants');
+      
+      try {
+          const response = await fetch(CONFIG.batchApiUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              body: JSON.stringify({
+                  customer_id: parseInt(customerId),
+                  variant_ids: variantIds,
+                  shop: CONFIG.shop,
+                  currency: CONFIG.currency
+              })
+          });
+
+          if (response.ok) {
+              const data = await response.json();
+              if (data.prices) {
+                  data.prices.forEach(price => {
+                      window.metoraCustomPrices[price.variant_id] = price;
+                  });
+                  console.log('✅ Batch prices updated');
+              }
+          }
+      } catch (e) {
+          console.error('❌ Batch fetch failed:', e);
+      }
+  }
+
   // Define Grid Helper Functions in shared scope
-  async function processCard(card, index) {
-    let variantId = getVariantIdFromCard(card);
+  async function processCard(card, variantId) {
+    if (card.getAttribute('data-metora-processed') && card.querySelector('.metora-custom-price-container')) return;
     
+    if (!variantId) variantId = getVariantIdFromCard(card);
+
     if (variantId) {
-      await checkAndDisplayCustomPriceOnCard(card, variantId);
+      card.setAttribute('data-metora-processed', 'true');
+      displayPriceFromCacheOrFetch(card, variantId);
     } else {
       const productId = card.getAttribute('data-product-id');
       if (productId) {
         variantId = await getFirstVariantFromProduct(card, productId);
         if (variantId) {
-          await checkAndDisplayCustomPriceOnCard(card, variantId);
+          card.setAttribute('data-metora-processed', 'true');
+          displayPriceFromCacheOrFetch(card, variantId);
         }
       }
     }
+  }
+
+  async function displayPriceFromCacheOrFetch(card, variantId) {
+      if (window.metoraCustomPrices[variantId]) {
+          applyPriceDataToCard(card, window.metoraCustomPrices[variantId]);
+      } else {
+          // Fallback to individual fetch if not in batch
+          await checkAndDisplayCustomPriceOnCard(card, variantId);
+      }
+  }
+
+  function applyPriceDataToCard(card, data) {
+      if (data.has_custom_price) {
+        const custom = parseFloat(data.custom_price);
+        const original = parseFloat(data.original_price);
+        const diff = original - custom;
+
+        if (custom >= original || diff <= 0.01) {
+            displaySilentPriceOnCard(card, data);
+        } else {
+            displayCustomPriceOnCard(card, data);
+        }
+      }
   }
 
   async function getFirstVariantFromProduct(card, productId) {
@@ -850,10 +928,22 @@
     });
   }
 
+  // MutationObserver for dynamic grids (Infinite scroll, filters)
+  const gridObserver = new MutationObserver((mutations) => {
+      let throttleTimer;
+      mutations.forEach(mutation => {
+          if (mutation.addedNodes.length > 0) {
+              clearTimeout(throttleTimer);
+              throttleTimer = setTimeout(initGridPricing, 500);
+          }
+      });
+  });
+  gridObserver.observe(document.body, { childList: true, subtree: true });
+
   // Run Grid Pricing site-wide
   setTimeout(initGridPricing, 100);
-  setInterval(initGridPricing, 3000); // Slower interval for grid to save battery
-  console.log('✨ Universal grid pricing initialized');
+  setInterval(initGridPricing, 5000); // Slower interval since observer is active
+  console.log('✨ Universal grid pricing initialized (MutationObserver Active)');
 
 
   // ============================================

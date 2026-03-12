@@ -155,6 +155,14 @@ Route::get('/identify-customer', function(Request $request) {
     return response()->json(['customer_id' => $request->query('logged_in_customer_id'), 'shop' => $request->query('shop'), 'timestamp' => now()->timestamp]);
 });
 
+// Resiliency: Mirror /app-proxy/app-proxy for misconfigured proxies
+Route::get('/app-proxy/app-proxy/script.js', function(Request $request) {
+    return redirect()->route('proxy.product.script', $request->query());
+});
+Route::get('/app-proxy/app-proxy/loyalty-widget.js', function(Request $request) {
+    return redirect()->route('proxy.loyalty.widget', $request->query());
+});
+
 // Single webhook endpoint for compliance webhooks
 Route::post('/webhooks', function (Request $request) {
     $topic = $request->header('X-Shopify-Topic');

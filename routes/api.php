@@ -75,6 +75,7 @@ Route::prefix('storefront')->group(function () {
     
     // Custom Pricing
     Route::post('/custom-price', [CustomPricingController::class, 'getCustomerPrice']);
+    Route::post('/batch-custom-price', [CustomPricingController::class, 'getBatchCustomPrices']);
     Route::post('/create-draft-order', [CustomPricingController::class, 'createDraftOrder']);
     
     // Loyalty

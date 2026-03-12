@@ -31,40 +31,40 @@
     function injectScript(proxyPath, filename, id) {
       if (document.getElementById(id)) return;
       
-      // Try with different path combinations
+      // Prioritize the path that actually maps in Laravel
       const pathsToTry = [
-          proxyPath + '/' + filename,           // 1. /apps/custom-pricing/script.js (Root Mapping)
-          proxyPath + '/app-proxy/' + filename,   // 2. /apps/custom-pricing/app-proxy/script.js (Group Mapping)
-          '/apps/custom-pricing/' + filename    // 3. Absolute Hardcoded
+          proxyPath + '/' + filename,             // 1. /apps/custom-pricing/script.js (MOST LIKELY)
+          '/apps/custom-pricing/' + filename,      // 2. /apps/custom-pricing/script.js (Absolute)
+          proxyPath + '/app-proxy/' + filename     // 3. Fallback for nested mapping
       ];
       
       let attempt = 0;
       
       function tryNextPath() {
           if (attempt >= pathsToTry.length) {
-              console.warn('❌ All proxy paths failed for ' + filename + '. Using direct fallback.');
+              // Direct fallback to server
               const fallbackScript = document.createElement('script');
-              // Using actual domain here instead of variable to ensure success
-              // We use /app-proxy/ prefix for direct calls to ensure signature verification if needed
+              fallbackScript.id = id;
               fallbackScript.src = "https://custompricing.task19.com/app-proxy/" + filename + "?shop=" + shop + (customerId ? "&logged_in_customer_id=" + customerId : "");
               document.head.appendChild(fallbackScript);
               return;
           }
           
           const currentPath = pathsToTry[attempt];
-          console.log('🔗 Trying path ' + (attempt + 1) + ': ' + currentPath);
-          
           const script = document.createElement('script');
           script.id = id + '-' + attempt;
           script.async = true;
           script.src = currentPath + '?shop=' + shop + (customerId ? '&logged_in_customer_id=' + customerId : '');
           
           script.onload = function() {
-              console.log('✅ Loaded: ' + filename + ' via ' + currentPath);
+              // Clean up any failed scripts from this attempt
+              for(let i=0; i<attempt; i++) {
+                  let old = document.getElementById(id + '-' + i);
+                  if(old) old.remove();
+              }
           };
           
           script.onerror = function() {
-              console.warn('⚠️ Path failed: ' + currentPath);
               attempt++;
               tryNextPath();
           };

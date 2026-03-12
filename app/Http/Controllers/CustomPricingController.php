@@ -491,7 +491,6 @@ class CustomPricingController extends Controller
         }
 
         // 1. Find the customer's pricing setting
-        // Optimization: Use simple where clauses that match composite indices if available
         $setting = CustomerPricingSetting::where('store_id', $store->id)
             ->where('shopify_customer_id', $request->customer_id)
             ->where('is_custom_pricing_enabled', true)
@@ -499,7 +498,7 @@ class CustomPricingController extends Controller
 
         if (!$setting) {
             return response()->json(['has_custom_price' => false])
-                ->header('Cache-Control', 'private, max-age=300'); // Cache negative result for 5 mins
+                ->header('Cache-Control', 'private, max-age=300');
         }
 
         // 2. Priority 1: Check for Individual Customer Price
@@ -536,6 +535,63 @@ class CustomPricingController extends Controller
 
         return response()->json(['has_custom_price' => false])
             ->header('Cache-Control', 'private, max-age=300');
+    }
+
+    /**
+     * Get multiple custom prices in one request.
+     */
+    public function getBatchCustomPrices(Request $request): JsonResponse
+    {
+        $request->validate([
+            'customer_id' => 'required|integer',
+            'variant_ids' => 'required|array',
+            'variant_ids.*' => 'integer',
+            'shop' => 'required|string'
+        ]);
+
+        $store = $request->attributes->get('store') ?? Store::where('shop_domain', $request->shop)->first();
+        if (!$store) return response()->json(['prices' => []]);
+
+        $setting = CustomerPricingSetting::where('store_id', $store->id)
+            ->where('shopify_customer_id', $request->customer_id)
+            ->where('is_custom_pricing_enabled', true)
+            ->first();
+
+        if (!$setting) return response()->json(['prices' => []]);
+
+        // Fetch all potential custom prices for these variants at once
+        $prices = CustomPrice::whereIn('shopify_variant_id', $request->variant_ids)
+            ->where(function($query) use ($setting) {
+                $query->where('customer_pricing_setting_id', $setting->id);
+                if ($setting->pricing_tier_id) {
+                    $query->orWhere('pricing_tier_id', $setting->pricing_tier_id);
+                }
+            })
+            ->get();
+
+        // Key by variant_id and prefer individual price over tier price
+        $results = [];
+        foreach ($prices as $p) {
+            $vid = (int)$p->shopify_variant_id;
+            
+            // Logic: if individual price found, use it. If only tier price found, use it.
+            $isIndividual = !empty($p->customer_pricing_setting_id);
+            
+            if (!isset($results[$vid]) || ($isIndividual && empty($results[$vid]['is_individual']))) {
+                $results[$vid] = [
+                    'has_custom_price' => true,
+                    'custom_price' => (float)$p->custom_price,
+                    'original_price' => (float)$p->original_price,
+                    'variant_id' => $vid,
+                    'is_individual' => $isIndividual
+                ];
+            }
+        }
+
+        return response()->json([
+            'prices' => array_values($results),
+            'currency' => $request->currency ?? 'USD'
+        ]);
     }
 
 
