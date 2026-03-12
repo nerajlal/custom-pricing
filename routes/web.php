@@ -133,24 +133,52 @@ Route::get('/loyalty-widget.js', function() {
     })->name('proxy.identify');
 });
 
-// Mirror routes for cases where proxy URL points to ROOT instead of /app-proxy
+// ============================================
+// PROXY SCRIPT MIRRORS (Handles various proxy path configs)
+// ============================================
+
+// 1. Root-level mirrors (Matches /apps/custom-pricing/script.js mapping to OUR_URL/script.js)
 Route::get('/script.js', function(Request $request) {
     $customerId = $request->query('logged_in_customer_id') ?? $request->query('customer_id');
     $jsContent = view('app-proxy.custom-price-script', ['customerId' => $customerId])->render();
     return response($jsContent)->header('Content-Type', 'application/javascript; charset=utf-8')->header('Access-Control-Allow-Origin', '*');
-});
-Route::get('/cart-script.js', function() {
-    $jsContent = view('app-proxy.cart-custom-price-script')->render();
-    return response($jsContent)->header('Content-Type', 'application/javascript; charset=utf-8')->header('Access-Control-Allow-Origin', '*');
-});
+})->name('mirror.script');
+
 Route::get('/loyalty-widget.js', function() {
     $jsContent = view('app-proxy.loyalty-widget-script')->render();
     return response($jsContent)->header('Content-Type', 'application/javascript; charset=utf-8')->header('Access-Control-Allow-Origin', '*');
-});
+})->name('mirror.loyalty');
+
 Route::get('/loyalty-cart.js', function() {
     $jsContent = view('app-proxy.loyalty-cart-script')->render();
     return response($jsContent)->header('Content-Type', 'application/javascript; charset=utf-8')->header('Access-Control-Allow-Origin', '*');
+})->name('mirror.cart');
+
+// 2. Double-proxy mirrors (Handles /apps/custom-pricing/app-proxy/script.js)
+Route::get('/app-proxy/script.js', function(Request $request) {
+    $customerId = $request->query('logged_in_customer_id') ?? $request->query('customer_id');
+    $jsContent = view('app-proxy.custom-price-script', ['customerId' => $customerId])->render();
+    return response($jsContent)->header('Content-Type', 'application/javascript; charset=utf-8')->header('Access-Control-Allow-Origin', '*');
 });
+
+Route::get('/app-proxy/loyalty-widget.js', function() {
+    $jsContent = view('app-proxy.loyalty-widget-script')->render();
+    return response($jsContent)->header('Content-Type', 'application/javascript; charset=utf-8')->header('Access-Control-Allow-Origin', '*');
+});
+
+// 3. Nested proxy mirrors (Handles common misconfigurations)
+Route::match(['get', 'post'], '/app-proxy/app-proxy/{filename}', function(Request $request, $filename) {
+    $customerId = $request->query('logged_in_customer_id') ?? $request->query('customer_id');
+    
+    if ($filename === 'script.js') {
+        return response(view('app-proxy.custom-price-script', ['customerId' => $customerId])->render())->header('Content-Type', 'application/javascript');
+    }
+    if ($filename === 'loyalty-widget.js') {
+        return response(view('app-proxy.loyalty-widget-script')->render())->header('Content-Type', 'application/javascript');
+    }
+    return response('Not found', 404);
+});
+
 Route::get('/identify-customer', function(Request $request) {
     return response()->json(['customer_id' => $request->query('logged_in_customer_id'), 'shop' => $request->query('shop'), 'timestamp' => now()->timestamp]);
 });
