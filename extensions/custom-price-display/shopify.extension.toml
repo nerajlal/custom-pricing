@@ -1,0 +1,9 @@
+api_version = "2026-01"
+
+[[extensions]]
+name = "custom-price-display"
+handle = "custom-price-display"
+
+uid = "53619c36-58a3-7b4a-4c8e-248044725ed034f8e26b"
+
+type = "theme"

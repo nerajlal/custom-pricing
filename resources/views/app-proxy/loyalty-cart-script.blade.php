@@ -350,7 +350,7 @@ console.log('👤 Loyalty Cart - Customer ID:', customerId);
 
     async function loadSettings() {
         try {
-            const response = await fetch(`${CONFIG.apiUrl}/admin/loyalty/settings?shop=${CONFIG.shop}`);
+            const response = await fetch(`${CONFIG.apiUrl}/storefront/loyalty/settings?shop=${CONFIG.shop}`);
             
             if (response.ok) {
                 settings = await response.json();

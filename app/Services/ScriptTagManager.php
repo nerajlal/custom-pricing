@@ -33,6 +33,10 @@ class ScriptTagManager
                 [
                     'src' => "{$appUrl}/app-proxy/loyalty-cart.js",
                     'displayScope' => 'ONLINE_STORE',
+                ],
+                [
+                    'src' => "{$appUrl}/app-proxy/loyalty-widget.js",
+                    'displayScope' => 'ONLINE_STORE',
                 ]
             ];
             
