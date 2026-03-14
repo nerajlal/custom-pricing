@@ -490,16 +490,16 @@ console.log('👤 Loyalty Cart - Customer ID:', customerId);
                     <div style="display: flex; gap: 8px; margin-bottom: 8px;">
                         <input 
                             type="number" 
-                            id="metora-loyalty-points-input" 
+                            class="metora-loyalty-points-input" 
                             placeholder="Enter points"
                             min="${settings.min_points_redemption}"
                             max="${loyaltyData.points_balance}"
                             style="flex: 1; padding: 10px; border: none; border-radius: 6px; font-size: 14px; color: #000;"
-                            oninput="window.metoraLoyalty.updateValue(this.value)"
+                            oninput="window.metoraLoyalty.updateValue(this)"
                         >
                         <button 
-                            onclick="window.metoraLoyalty.redeemPoints()" 
-                            id="metora-loyalty-redeem-btn"
+                            onclick="window.metoraLoyalty.redeemPoints(this)" 
+                            class="metora-loyalty-redeem-btn"
                             style="background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px; white-space: nowrap;"
                         >
                             Redeem
@@ -508,7 +508,7 @@ console.log('👤 Loyalty Cart - Customer ID:', customerId);
                     
                     <div style="display: flex; justify-content: space-between; font-size: 12px; opacity: 0.9;">
                         <span>Min: ${settings.min_points_redemption} pts</span>
-                        <span id="metora-loyalty-value-display">= ₹0.00</span>
+                        <span class="metora-loyalty-value-display">= ₹0.00</span>
                     </div>
                 </div>
 
@@ -617,11 +617,25 @@ console.log('👤 Loyalty Cart - Customer ID:', customerId);
     window.metoraLoyalty = {
         switchTab: switchTab,
         
-        updateValue: function(points) {
+        updateValue: function(inputElement) {
+            let points = 0;
+            if (typeof inputElement === 'object') {
+                points = parseInt(inputElement.value || 0);
+            } else {
+                points = parseInt(inputElement || 0);
+            }
             const value = (points * settings.points_value_cents / 100).toFixed(2);
-            const display = document.getElementById('metora-loyalty-value-display');
-            if (display) {
-                display.textContent = `= ₹${value}`;
+            
+            // If called from an input, update its specific display
+            if (typeof inputElement === 'object' && inputElement.closest) {
+                const container = inputElement.closest('.metora-loyalty-widget-embedded, #metora-loyalty-modal');
+                if (container) {
+                    const display = container.querySelector('.metora-loyalty-value-display');
+                    if (display) display.textContent = `= ₹${value}`;
+                }
+            } else {
+                // Fallback for quickRedeem
+                document.querySelectorAll('.metora-loyalty-value-display').forEach(d => d.textContent = `= ₹${value}`);
             }
         },
 
@@ -630,20 +644,39 @@ console.log('👤 Loyalty Cart - Customer ID:', customerId);
             alert('Insufficient points balance');
             return;
         }
-        const input = document.getElementById('metora-loyalty-points-input');
-        if (input) {
+        // Update all visible inputs just in case
+        document.querySelectorAll('.metora-loyalty-points-input').forEach(input => {
             input.value = points;
-            this.updateValue(points);
-        }
-        this.redeemPoints();
+        });
+        
+        this.updateValue(points);
+        
+        // Find the first visible redeem button to trigger
+        const activeBtn = document.querySelector('.metora-loyalty-redeem-btn');
+        this.redeemPoints(activeBtn);
     },
 
     redeemAll: function() {
         this.quickRedeem(loyaltyData.points_balance);
     },
 
-    redeemPoints: async function() {
-        const input = document.getElementById('metora-loyalty-points-input');
+    redeemPoints: async function(btnElement) {
+        let input;
+        let btn = btnElement;
+        
+        // Find the input corresponding to the clicked button
+        if (btn && btn.closest) {
+            const container = btn.closest('.metora-loyalty-widget-embedded, #metora-loyalty-modal');
+            if (container) {
+                input = container.querySelector('.metora-loyalty-points-input');
+            }
+        }
+        
+        // Fallback
+        if (!input) {
+            input = document.querySelector('.metora-loyalty-points-input');
+        }
+
         const points = parseInt(input?.value || 0);
         
         if (!points || points < settings.min_points_redemption) {
@@ -656,11 +689,10 @@ console.log('👤 Loyalty Cart - Customer ID:', customerId);
             return;
         }
 
-        const btn = document.getElementById('metora-loyalty-redeem-btn');
-        if (btn) {
-            btn.disabled = true;
-            btn.textContent = 'Redeeming...';
-        }
+        document.querySelectorAll('.metora-loyalty-redeem-btn').forEach(b => {
+            b.disabled = true;
+            b.textContent = 'Redeeming...';
+        });
 
         try {
             const response = await fetch(`${CONFIG.apiUrl}/storefront/redemptions/create`, {
@@ -691,10 +723,10 @@ console.log('👤 Loyalty Cart - Customer ID:', customerId);
             console.error('❌ Redemption error:', error);
             alert('Failed to redeem points. Please try again.');
         } finally {
-            if (btn) {
-                btn.disabled = false;
-                btn.textContent = 'Redeem';
-            }
+            document.querySelectorAll('.metora-loyalty-redeem-btn').forEach(b => {
+                b.disabled = false;
+                b.textContent = 'Redeem';
+            });
         }
     },
 
