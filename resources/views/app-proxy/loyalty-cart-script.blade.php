@@ -563,6 +563,12 @@ console.log('👤 Loyalty Cart - Customer ID:', customerId);
                 
                 const btn = e.target.closest('button[name="checkout"], input[name="checkout"], a[href*="/checkout"], .cart__checkout-button, [data-shopify="checkout-button"]');
                 if (btn) {
+                    // Let custom pricing script handle checkout if there are custom prices active
+                    if (window.metoraCustomPrices && Object.keys(window.metoraCustomPrices).length > 0) {
+                        console.log('ℹ️ Loyalty: Deferring to custom price checkout interceptor');
+                        return;
+                    }
+
                     e.preventDefault();
                     e.stopPropagation();
                     console.log('🚀 Intercepted checkout click via delegation, applying discount:', activeRedemption.coupon_code);
@@ -577,6 +583,12 @@ console.log('👤 Loyalty Cart - Customer ID:', customerId);
                 const form = e.target.closest('form[action="/cart"], form.cart__contents');
                 // Check if the submit was triggered by a checkout button
                 if (form && e.submitter && (e.submitter.name === 'checkout' || e.submitter.classList.contains('cart__checkout-button'))) {
+                    // Let custom pricing script handle checkout if there are custom prices active
+                    if (window.metoraCustomPrices && Object.keys(window.metoraCustomPrices).length > 0) {
+                        console.log('ℹ️ Loyalty: Deferring to custom price form interceptor');
+                        return;
+                    }
+
                     e.preventDefault();
                     e.stopPropagation();
                     console.log('🚀 Intercepted cart form submit, applying discount:', activeRedemption.coupon_code);
@@ -588,13 +600,7 @@ console.log('👤 Loyalty Cart - Customer ID:', customerId);
             console.log('✅ Added global checkout interceptors');
         }
     
-        // Method 2: Intercept Shopify checkout redirect
-        if (window.Shopify && window.Shopify.routes) {
-            const originalCheckout = window.Shopify.routes.root || '/checkout';
-            window.Shopify.routes.root = `${originalCheckout}?discount=${activeRedemption.coupon_code}`;
-        }
-    
-        // **REMOVED: Method 3 - DO NOT call /cart/update.js as it triggers the loop**
+        // **REMOVED: Method 2** - Modifying Shopify.routes.root breaks dynamic cart AJAX endpoints in modern themes.
         // The discount will be applied via URL parameter at checkout instead
     
         console.log('✅ Discount auto-apply setup complete');
