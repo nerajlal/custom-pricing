@@ -264,53 +264,58 @@ console.log('👤 Loyalty Cart - Customer ID:', customerId);
     // switchTab attached to window.metoraLoyalty later
 
     function createEmbeddedWidget() {
-        const widget = document.createElement('div');
-        widget.id = 'metora-loyalty-widget';
-        widget.style.cssText = `
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 12px;
-            padding: 20px;
-            margin: 20px 0;
-            color: white;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        `;
-        
-        widget.innerHTML = `
-            <div id="metora-loyalty-content">
-                <div style="text-align: center; padding: 20px;">
-                    <div style="font-size: 16px; font-weight: 600;">Loading loyalty points...</div>
-                </div>
-            </div>
-        `;
+        // Remove existing to avoid duplicates on refresh
+        document.querySelectorAll('.metora-loyalty-widget-embedded').forEach(w => w.remove());
 
-        // Find cart form and insert before checkout button
-        const cartForm = document.querySelector('form[action="/cart"]');
+        // Find all cart forms/containers
+        let cartForms = Array.from(document.querySelectorAll('form[action="/cart"], form[action^="/cart?"], .cart-drawer, cart-drawer, #cart-drawer-form'));
         
-        if (cartForm) {
-            const checkoutButton = cartForm.querySelector('button[name="checkout"]') ||
-                                  cartForm.querySelector('.cart__checkout-button');
+        if (cartForms.length === 0) {
+            // Fallback
+            const fallback = document.querySelector('.cart, #cart, main');
+            if (fallback) cartForms = [fallback];
+            else return null;
+        }
+
+        cartForms.forEach(cartForm => {
+            // Avoid duplicate injection in nested forms
+            if (cartForm.querySelector('.metora-loyalty-widget-embedded')) return;
+
+            const widget = document.createElement('div');
+            widget.className = 'metora-loyalty-widget-embedded';
+            widget.style.cssText = `
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border-radius: 12px;
+                padding: 20px;
+                margin: 20px 0;
+                color: white;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            `;
+            
+            widget.innerHTML = `
+                <div class="metora-loyalty-content-dynamic">
+                    <div style="text-align: center; padding: 20px;">
+                        <div style="font-size: 16px; font-weight: 600;">Loading loyalty points...</div>
+                    </div>
+                </div>
+            `;
+
+            const checkoutButton = cartForm.querySelector('button[name="checkout"], .cart__checkout-button');
             
             if (checkoutButton) {
-                // Insert before checkout button's parent container
-                const checkoutContainer = checkoutButton.closest('.cart__footer, .cart__ctas, .cart-footer');
-                if (checkoutContainer) {
+                const checkoutContainer = checkoutButton.closest('.cart__footer, .cart__ctas, .cart-footer, .drawer__footer');
+                if (checkoutContainer && checkoutContainer.parentNode) {
                     checkoutContainer.parentNode.insertBefore(widget, checkoutContainer);
-                } else {
+                } else if (checkoutButton.parentNode) {
                     checkoutButton.parentNode.insertBefore(widget, checkoutButton);
                 }
             } else {
                 cartForm.appendChild(widget);
             }
-        } else {
-            // Fallback
-            const cartContainer = document.querySelector('.cart, #cart, main');
-            if (cartContainer) {
-                cartContainer.appendChild(widget);
-            }
-        }
+        });
 
-        console.log('✅ Embedded Widget container created');
-        return widget;
+        console.log('✅ Embedded Widget containers created');
+        return true;
     }
 
     // ============================================
@@ -403,11 +408,20 @@ console.log('👤 Loyalty Cart - Customer ID:', customerId);
     // ============================================
     // RENDER WIDGET CONTENT
     // ============================================
-    function renderWidgetContent(containerId = 'metora-loyalty-content') {
-        const content = document.getElementById(containerId);
-        if (!content) return;
+    function renderWidgetContent(targetIdentifier) {
+        let contents = [];
+        if (targetIdentifier.startsWith('.')) {
+            contents = Array.from(document.querySelectorAll(targetIdentifier));
+        } else {
+            const el = document.getElementById(targetIdentifier);
+            if (el) contents.push(el);
+        }
+
+        if (contents.length === 0) return;
 
         const pointValue = (loyaltyData.points_balance * settings.points_value_cents / 100).toFixed(2);
+        
+        let htmlString = '';
 
         if (activeRedemption) {
             // Show active redemption
@@ -518,14 +532,20 @@ console.log('👤 Loyalty Cart - Customer ID:', customerId);
             `;
         }
 
-        console.log('✅ Widget rendered');
+        contents.forEach(content => {
+            content.innerHTML = htmlString;
+        });
+
+        console.log('✅ Widget rendered in', contents.length, 'containers');
     }
 
     function removeWidget() {
-        const widget = document.getElementById('metora-loyalty-widget');
-        if (widget) {
-            widget.remove();
-        }
+        // Remove ALL possible widgets
+        document.querySelectorAll('.metora-loyalty-widget-embedded').forEach(w => w.remove());
+        const modal = document.getElementById('metora-loyalty-modal');
+        if (modal) modal.remove();
+        const launcher = document.getElementById('metora-loyalty-launcher');
+        if (launcher) launcher.remove();
     }
 
     // ============================================
@@ -659,7 +679,7 @@ console.log('👤 Loyalty Cart - Customer ID:', customerId);
                 activeRedemption = data.redemption;
                 loyaltyData.points_balance = data.remaining_balance;
                 
-                renderWidgetContent('metora-loyalty-content');
+                renderWidgetContent('.metora-loyalty-content-dynamic');
                 renderWidgetContent('metora-loyalty-modal-content');
                 autoApplyDiscount();
                 
@@ -725,17 +745,17 @@ console.log('👤 Loyalty Cart - Customer ID:', customerId);
             return;
         }
         
-        // Check if widget still exists
-        const widget = document.getElementById('metora-loyalty-widget');
+        // Check if ANY embedded widget exists
+        const widgets = document.querySelectorAll('.metora-loyalty-widget-embedded');
         
-        if (!widget) {
+        if (widgets.length === 0 && isCartPage) {
             console.log('⚠️ Loyalty widget missing, recreating...');
-            createWidget();
+            createEmbeddedWidget();
         }
         
         // Re-render content (without fetching new data)
         if (loyaltyData) {
-            renderWidgetContent('metora-loyalty-content');
+            renderWidgetContent('.metora-loyalty-content-dynamic');
             renderWidgetContent('metora-loyalty-modal-content');
             
             // Reapply discount if active
@@ -766,7 +786,7 @@ console.log('👤 Loyalty Cart - Customer ID:', customerId);
 
     // Helper to update all visible instances
     function renderAllWidgets() {
-        renderWidgetContent('metora-loyalty-content');
+        renderWidgetContent('.metora-loyalty-content-dynamic');
         renderWidgetContent('metora-loyalty-modal-content');
     }
 
