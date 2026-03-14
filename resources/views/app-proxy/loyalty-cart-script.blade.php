@@ -578,16 +578,17 @@ console.log('👤 Loyalty Cart - Customer ID:', customerId);
                 const form = btn.closest('form');
                 
                 if (form) {
-                    // Store original action
-                    if (!form.dataset.originalAction) {
-                        form.dataset.originalAction = form.action;
+                    // Add a hidden discount input field instead of modifying form.action
+                    // This prevents breaking modern themes (like Dawn) that use cart AJAX
+                    let discountInput = form.querySelector('input[name="discount"]');
+                    if (!discountInput) {
+                        discountInput = document.createElement('input');
+                        discountInput.type = 'hidden';
+                        discountInput.name = 'discount';
+                        form.appendChild(discountInput);
                     }
-                    
-                    // Update form action
-                    const baseAction = form.dataset.originalAction || form.action;
-                    const separator = baseAction.includes('?') ? '&' : '?';
-                    form.action = baseAction.split('?')[0] + `?discount=${activeRedemption.coupon_code}`;
-                    console.log('✅ Updated form action:', form.action);
+                    discountInput.value = activeRedemption.coupon_code;
+                    console.log('✅ Injected hidden discount input into form');
                 } else {
                     // No form - add onclick handler
                     btn.onclick = function(e) {
