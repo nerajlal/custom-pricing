@@ -425,7 +425,7 @@ console.log('👤 Loyalty Cart - Customer ID:', customerId);
 
         if (activeRedemption) {
             // Show active redemption
-            content.innerHTML = `
+            htmlString = `
                 <div style="background: rgba(255,255,255,0.15); padding: 16px; border-radius: 8px; margin-bottom: 12px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                         <div>
@@ -458,7 +458,7 @@ console.log('👤 Loyalty Cart - Customer ID:', customerId);
             `;
         } else if (loyaltyData.points_balance < settings.min_points_redemption) {
             // Not enough points
-            content.innerHTML = `
+            htmlString = `
                 <div style="text-align: center;">
                     <div style="font-size: 40px; margin-bottom: 8px;">⭐</div>
                     <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Loyalty Points</div>
@@ -472,7 +472,7 @@ console.log('👤 Loyalty Cart - Customer ID:', customerId);
             `;
         } else {
             // Show redemption form
-            content.innerHTML = `
+            htmlString = `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                     <div>
                         <div style="font-size: 14px; opacity: 0.9;">Available Points</div>
