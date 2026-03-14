@@ -514,18 +514,18 @@ console.log('👤 Loyalty Cart - Customer ID:', customerId);
 
                 <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
                     ${loyaltyData.points_balance >= 100 ? `
-                    <button onclick="window.metoraLoyalty.quickRedeem(100)" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 4px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 500;">
+                    <button onclick="window.metoraLoyalty.quickRedeem(100, this)" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 4px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 500;">
                         100 pts<br><span style="font-size: 9px; opacity: 0.8;">₹1 off</span>
                     </button>` : ''}
                     ${loyaltyData.points_balance >= 250 ? `
-                    <button onclick="window.metoraLoyalty.quickRedeem(250)" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 4px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 500;">
+                    <button onclick="window.metoraLoyalty.quickRedeem(250, this)" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 4px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 500;">
                         250 pts<br><span style="font-size: 9px; opacity: 0.8;">₹2.5 off</span>
                     </button>` : ''}
                     ${loyaltyData.points_balance >= 500 ? `
-                    <button onclick="window.metoraLoyalty.quickRedeem(500)" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 4px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 500;">
+                    <button onclick="window.metoraLoyalty.quickRedeem(500, this)" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 4px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 500;">
                         500 pts<br><span style="font-size: 9px; opacity: 0.8;">₹5 off</span>
                     </button>` : ''}
-                    <button onclick="window.metoraLoyalty.redeemAll()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 4px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 500;">
+                    <button onclick="window.metoraLoyalty.redeemAll(this)" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 4px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 500;">
                         All<br><span style="font-size: 9px; opacity: 0.8;">${loyaltyData.points_balance} pts</span>
                     </button>
                 </div>
@@ -639,25 +639,36 @@ console.log('👤 Loyalty Cart - Customer ID:', customerId);
             }
         },
 
-    quickRedeem: function(points) {
+    quickRedeem: function(points, btnElement) {
         if (points > loyaltyData.points_balance) {
             alert('Insufficient points balance');
             return;
         }
-        // Update all visible inputs just in case
-        document.querySelectorAll('.metora-loyalty-points-input').forEach(input => {
+
+        let input;
+        let redeemBtn;
+
+        if (btnElement && btnElement.closest) {
+            const container = btnElement.closest('.metora-loyalty-widget-embedded, #metora-loyalty-modal');
+            if (container) {
+                input = container.querySelector('.metora-loyalty-points-input');
+                redeemBtn = container.querySelector('.metora-loyalty-redeem-btn');
+            }
+        }
+
+        if (!input) input = document.querySelector('.metora-loyalty-points-input');
+        if (!redeemBtn) redeemBtn = document.querySelector('.metora-loyalty-redeem-btn');
+
+        if (input) {
             input.value = points;
-        });
+            this.updateValue(input);
+        }
         
-        this.updateValue(points);
-        
-        // Find the first visible redeem button to trigger
-        const activeBtn = document.querySelector('.metora-loyalty-redeem-btn');
-        this.redeemPoints(activeBtn);
+        this.redeemPoints(redeemBtn);
     },
 
-    redeemAll: function() {
-        this.quickRedeem(loyaltyData.points_balance);
+    redeemAll: function(btnElement) {
+        this.quickRedeem(loyaltyData.points_balance, btnElement);
     },
 
     redeemPoints: async function(btnElement) {
