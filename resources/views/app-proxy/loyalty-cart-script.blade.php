@@ -574,29 +574,20 @@ console.log('👤 Loyalty Cart - Customer ID:', customerId);
             } 
             // For buttons and inputs
             else if (btn.tagName === 'BUTTON' || btn.tagName === 'INPUT') {
-                // Find parent form
-                const form = btn.closest('form');
+                // Remove existing click handlers if any to prevent duplicates during refresh
+                btn.removeEventListener('click', window.metoraLoyaltyCheckoutHandler);
                 
-                if (form) {
-                    // Add a hidden discount input field instead of modifying form.action
-                    // This prevents breaking modern themes (like Dawn) that use cart AJAX
-                    let discountInput = form.querySelector('input[name="discount"]');
-                    if (!discountInput) {
-                        discountInput = document.createElement('input');
-                        discountInput.type = 'hidden';
-                        discountInput.name = 'discount';
-                        form.appendChild(discountInput);
-                    }
-                    discountInput.value = activeRedemption.coupon_code;
-                    console.log('✅ Injected hidden discount input into form');
-                } else {
-                    // No form - add onclick handler
-                    btn.onclick = function(e) {
-                        e.preventDefault();
-                        window.location.href = `/checkout?discount=${activeRedemption.coupon_code}`;
-                    };
-                    console.log('✅ Added onclick handler');
-                }
+                // Define the handler
+                window.metoraLoyaltyCheckoutHandler = function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🚀 Intercepted checkout click, applying discount:', activeRedemption.coupon_code);
+                    window.location.href = `/checkout?discount=${activeRedemption.coupon_code}`;
+                };
+
+                // Add the click listener
+                btn.addEventListener('click', window.metoraLoyaltyCheckoutHandler, true);
+                console.log('✅ Added checkout click interceptor');
             }
         });
     
