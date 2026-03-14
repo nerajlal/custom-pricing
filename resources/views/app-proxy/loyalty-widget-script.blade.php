@@ -94,7 +94,7 @@
                             <div class="lw-view-btn-sub">See all transactions & rewards</div>
                         </button>
 
-                        <div class="lw-redeem-note">Contact us to redeem your points</div>
+                        <div class="lw-redeem-note" id="widget-small-redeem-note">Earn more points to unlock discounts</div>
                     </div>
                 </div>
             </div>
@@ -251,10 +251,15 @@
                                         <div id="popup-tiers-list" class="lp-tiers"></div>
                                     </div>
 
-                                    <div class="lp-card lp-card-centered">
+                                    <div class="lp-card lp-card-centered" id="popup-redeem-section">
                                         <h3 class="lp-card-subtitle">Redeem Your Points</h3>
-                                        <p class="lp-redeem-text">Contact us to use your points for discounts</p>
-                                        <a href="/pages/contact" class="lp-btn">Contact Store</a>
+                                        <div id="popup-redeem-form">
+                                            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                                                <input type="number" id="widget-redeem-input" placeholder="Points" min="100" style="flex:1; padding: 8px; border: 1px solid #e1e3e5; border-radius: 6px; text-align: center;">
+                                                <button onclick="redeemWidgetPoints()" class="lp-btn" style="padding: 8px 16px; margin: 0;" id="widget-redeem-btn">Redeem</button>
+                                            </div>
+                                            <p class="lp-redeem-text" style="font-size: 12px; margin-bottom: 0;" id="widget-redeem-msg">Enter points to get a discount code</p>
+                                        </div>
                                     </div>
                                     
                                 </div>
@@ -1105,6 +1110,81 @@
             allTiers = [];
         }
     }
+
+    // ============================================
+    // REDEEM POINTS
+    // ============================================
+    window.redeemWidgetPoints = async function() {
+        const input = document.getElementById('widget-redeem-input');
+        const points = parseInt(input?.value || 0);
+        const msg = document.getElementById('widget-redeem-msg');
+        const btn = document.getElementById('widget-redeem-btn');
+        const smallNote = document.getElementById('widget-small-redeem-note');
+        
+        if (!points || points < 100) {
+            if(msg) { msg.textContent = 'Please enter at least 100 points'; msg.style.color = '#ef4444'; }
+            return;
+        }
+
+        if (points > (loyaltyData?.points_balance || 0)) {
+            if(msg) { msg.textContent = 'Insufficient points balance'; msg.style.color = '#ef4444'; }
+            return;
+        }
+
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = '...';
+        }
+        if(msg) { msg.textContent = 'Redeeming...'; msg.style.color = '#6d7175'; }
+
+        try {
+            const response = await fetch(`${API_URL}/storefront/redemptions/create`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customer_id: customerId,
+                    shop: SHOP_DOMAIN,
+                    points: points
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Remove form, show code
+                const container = document.getElementById('popup-redeem-form');
+                if (container) {
+                    container.innerHTML = `
+                        <div style="background: #f6f6f7; padding: 12px; border-radius: 8px; margin-bottom: 8px;">
+                            <div style="font-size: 11px; color: #6d7175; text-transform: uppercase;">Your Discount Code</div>
+                            <div style="font-size: 20px; font-weight: bold; margin: 4px 0; letter-spacing: 1px; color: #202223;">${data.redemption.coupon_code}</div>
+                            <div style="font-size: 13px; color: #008060; font-weight: 500;">✓ $${data.discount_amount} OFF activated</div>
+                        </div>
+                        <p style="font-size: 12px; color: #6d7175; margin: 0;">Code is automatically applied at checkout.</p>
+                    `;
+                }
+                if (smallNote) {
+                    smallNote.innerHTML = `<span style="color:#10b981; font-weight:600;">Discount Active:</span> ${data.redemption.coupon_code}`;
+                }
+                
+                // Refresh data
+                await loadAllData();
+                updatePopupContent();
+                
+                // Force cart drawer reload if exists (Dawn specific)
+                if (window.metoraLoyalty && window.metoraLoyalty.refreshWidget) {
+                    window.metoraLoyalty.refreshWidget();
+                }
+            } else {
+                if(msg) { msg.textContent = data.error || 'Failed to redeem points'; msg.style.color = '#ef4444'; }
+                if (btn) { btn.disabled = false; btn.textContent = 'Redeem'; }
+            }
+        } catch (error) {
+            console.error('Loyalty Widget: Redemption error', error);
+            if(msg) { msg.textContent = 'Failed to connect. Try again later.'; msg.style.color = '#ef4444'; }
+            if (btn) { btn.disabled = false; btn.textContent = 'Redeem'; }
+        }
+    };
 
     // ============================================
     // UPDATE WIDGET
