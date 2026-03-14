@@ -556,40 +556,37 @@ console.log('👤 Loyalty Cart - Customer ID:', customerId);
     
         console.log('🎫 Auto-applying discount:', activeRedemption.coupon_code);
     
-        // Method 1: Update checkout URL in links and buttons
-        const checkoutButtons = document.querySelectorAll(
-            'button[name="checkout"], ' +
-            'input[name="checkout"], ' +
-            'a[href*="/checkout"], ' +
-            '.cart__checkout-button, ' +
-            '[data-shopify="checkout-button"]'
-        );
-    
-        checkoutButtons.forEach(btn => {
-            // For <a> tags, update href
-            if (btn.tagName === 'A') {
-                const separator = btn.href.includes('?') ? '&' : '?';
-                btn.href = btn.href.split('?')[0] + `?discount=${activeRedemption.coupon_code}`;
-                console.log('✅ Updated link href:', btn.href);
-            } 
-            // For buttons and inputs
-            else if (btn.tagName === 'BUTTON' || btn.tagName === 'INPUT') {
-                // Remove existing click handlers if any to prevent duplicates during refresh
-                btn.removeEventListener('click', window.metoraLoyaltyCheckoutHandler);
+        if (!window.metoraLoyaltyCheckoutDelegated) {
+            // Intercept checkout clicks globally to support dynamic cart drawers
+            document.addEventListener('click', function(e) {
+                if (!activeRedemption) return;
                 
-                // Define the handler
-                window.metoraLoyaltyCheckoutHandler = function(e) {
+                const btn = e.target.closest('button[name="checkout"], input[name="checkout"], a[href*="/checkout"], .cart__checkout-button, [data-shopify="checkout-button"]');
+                if (btn) {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('🚀 Intercepted checkout click, applying discount:', activeRedemption.coupon_code);
+                    console.log('🚀 Intercepted checkout click via delegation, applying discount:', activeRedemption.coupon_code);
                     window.location.href = `/checkout?discount=${activeRedemption.coupon_code}`;
-                };
-
-                // Add the click listener
-                btn.addEventListener('click', window.metoraLoyaltyCheckoutHandler, true);
-                console.log('✅ Added checkout click interceptor');
-            }
-        });
+                }
+            }, true); // Use capture phase to ensure we intercept before theme scripts
+            
+            // Intercept checkout form submissions as a fallback
+            document.addEventListener('submit', function(e) {
+                if (!activeRedemption) return;
+                
+                const form = e.target.closest('form[action="/cart"], form.cart__contents');
+                // Check if the submit was triggered by a checkout button
+                if (form && e.submitter && (e.submitter.name === 'checkout' || e.submitter.classList.contains('cart__checkout-button'))) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🚀 Intercepted cart form submit, applying discount:', activeRedemption.coupon_code);
+                    window.location.href = `/checkout?discount=${activeRedemption.coupon_code}`;
+                }
+            }, true);
+            
+            window.metoraLoyaltyCheckoutDelegated = true;
+            console.log('✅ Added global checkout interceptors');
+        }
     
         // Method 2: Intercept Shopify checkout redirect
         if (window.Shopify && window.Shopify.routes) {
